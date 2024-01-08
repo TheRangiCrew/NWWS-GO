@@ -20,7 +20,7 @@ func ParseAWIPS(text string) (AWIPS, error) {
 	}
 
 	product := original[0:3]
-	wfo := original[3:]
+	wfo := original[3:6]
 
 	return AWIPS{
 		Original: original,
