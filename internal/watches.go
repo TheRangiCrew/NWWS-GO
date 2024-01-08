@@ -79,7 +79,7 @@ func createWatch(t string, n int, issued time.Time) (*Watch, error) {
 
 	q := Queue()
 
-	id := t + "W" + padLeft(strconv.Itoa(n), 4) + strconv.Itoa(issued.Year())
+	id := t + "A" + padLeft(strconv.Itoa(n), 4) + strconv.Itoa(issued.Year())
 
 	s := ""
 	w := ""
