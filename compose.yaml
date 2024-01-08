@@ -1,0 +1,28 @@
+services:
+  surreal:
+    image: "surrealdb/surrealdb:latest"
+    container_name: surreal
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./surreal/nwws:/db"
+    restart: unless-stopped
+    command: start --auth file:db
+    user: root
+  nwws-go:
+    build: .
+    depends_on:
+      - surreal
+    restart: unless-stopped
+    container_name: nwws-go
+    environment:
+      - SURREAL_URL=${SURREAL_URL:?surreal url not set}
+      - SURREAL_USERNAME=${SURREAL_USERNAME:?surreal username not set}
+      - SURREAL_PASSWORD=${SURREAL_PASSWORD:?surreal password not set}
+      - SURREAL_DATABASE=${SURREAL_DATABASE:?surreal db not set}
+      - SURREAL_NAMESPACE=${SURREAL_NAMESPACE:?surreal namespace not set}
+      - NWWS_SERVER=${NWWS_SERVER:?NWWS server url not set}
+      - NWWS_ROOM=${NWWS_ROOM:?NWWS room not set}
+      - NWWS_USER=${NWWS_USER:?NWWS user not set}
+      - NWWS_PASS=${NWWS_PASS:?NWWS pass not set}
+      - NWWS_RESOURCE=${NWWS_RESOURCE:?NWWS resource not set}

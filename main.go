@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/TheRangiCrew/NWWS-GO/internal"
-	"github.com/joho/godotenv"
 )
 
 func runTestFiles() {
@@ -35,9 +34,13 @@ func runTestFiles() {
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
+
+	if internal.Surreal() == nil {
+		log.Fatal("Failed to connect to DB")
 	}
 
 	// Lazy but comment out what shouldn't be running
