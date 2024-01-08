@@ -147,13 +147,16 @@ func Processor(text string, errCh chan error) {
 			Text: s,
 		}
 		vtecs := FindPVTEC(s)
-		if vtecs > 0 {
+		switch {
+		case vtecs > 0:
 			err := ParseVTECProduct(segment, product)
 			if err != nil {
 				errCh <- err
 			}
+		default:
+			close(errCh)
+			return
 		}
-
 	}
 
 	// Push the text product to the database
