@@ -3,9 +3,8 @@ package internal
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"time"
-
-	"github.com/surrealdb/surrealdb.go"
 )
 
 type VTECSegment struct {
@@ -29,24 +28,24 @@ type VTECSegment struct {
 	PDS        bool            `json:"pds"`
 }
 
-func ParseVTECProduct(segment string, product Product) error {
+func ParseVTECProduct(segment Segment, product Product) error {
 
 	emergencyRegexp := regexp.MustCompile(`(TORNADO|FLASH\s+FLOOD)\s+EMERGENCY`)
 	pdsRegexp := regexp.MustCompile(`THIS\s+IS\s+A\s+PARTICULARLY\s+DANGEROUS\s+SITUATION`)
 
-	ugc, err := ParseUGC(segment, product.Issued)
+	ugc, err := ParseUGC(segment.Text, product.Issued)
 	if err != nil {
 		return err
 	}
 
-	vtecs, err := ParsePVTEC(segment, product.Issued)
+	vtecs, err := ParsePVTEC(segment.Text, product.Issued)
 	if err != nil {
 		return err
 	}
 
-	hvtec := ParseHVTEC(segment, product.Issued)
+	hvtec := ParseHVTEC(segment.Text, product.Issued)
 
-	latlon, err := ParseLatLon(segment)
+	latlon, err := ParseLatLon(segment.Text)
 	if err != nil {
 		return err
 	}
@@ -58,21 +57,30 @@ func ParseVTECProduct(segment string, product Product) error {
 		polygon = nil
 	}
 
-	tml, err := ParseTML(segment, product.Issued)
+	tml, err := ParseTML(segment.Text, product.Issued)
 	if err != nil {
 		return err
 	}
 
-	emergency := emergencyRegexp.MatchString(segment)
-	pds := pdsRegexp.MatchString(segment)
+	emergency := emergencyRegexp.MatchString(segment.Text)
+	pds := pdsRegexp.MatchString(segment.Text)
 
-	hazardTags := ParseHazardTags(segment)
+	hazardTags := ParseHazardTags(segment.Text)
+
+	month := padLeft(strconv.Itoa(int(product.Issued.Month())), 2)
+	day := padLeft(strconv.Itoa(product.Issued.Day()), 2)
+	hour := padLeft(strconv.Itoa(product.Issued.Hour()), 2)
+	minute := padLeft(strconv.Itoa(product.Issued.Minute()), 2)
+	second := padLeft(strconv.Itoa(time.Now().Second()), 2)
 
 	for _, vtec := range vtecs {
 
+		id := vtec.ID + month + day + hour + minute + second + padLeft(strconv.Itoa(segment.ID), 2)
+
 		final := VTECSegment{
+			ID:         id,
 			VTECUID:    vtec.ID,
-			Original:   segment,
+			Original:   segment.Text,
 			Issued:     product.WMO.Issued, // From WMO line
 			Start:      vtec.Start,         // From VTEC
 			End:        vtec.End,           // From VTEC
@@ -89,26 +97,8 @@ func ParseVTECProduct(segment string, product Product) error {
 			PDS:        pds,
 		}
 
-		// Push the text product to the database
-		_, err := Surreal().Create("text_products", product)
-		if err != nil {
-			return err
-		}
-
-		result, err := Surreal().Create("vtec_segments", final)
-		if err != nil {
-			return err
-		}
-
-		// NOTE: Surreal returns an array of the result which requires an array to be Unmarshalled. This is referenced later
-		record := new([]VTECSegment)
-		err = surrealdb.Unmarshal(result, &record)
-		if err != nil {
-			return err
-		}
-
 		// RELATE the text product to the segment
-		_, err = Surreal().Query(fmt.Sprintf("RELATE text_products:%s->vtec_text_products->%s", product.ID, (*record)[0].ID), map[string]string{})
+		_, err = Surreal().Query(fmt.Sprintf("RELATE text_products:%s->vtec_text_products->vtec_segments:%s", product.ID, id), map[string]string{})
 		if err != nil {
 			return err
 		}
@@ -122,13 +112,19 @@ func ParseVTECProduct(segment string, product Product) error {
 			}
 			for _, c := range s.Zones {
 				// RELATE the county/zones to the segment
-				_, err = Surreal().Query(fmt.Sprintf("RELATE %s->vtec_county_zones->%s", (*record)[0].ID, t+s.Name+c), map[string]string{})
+				_, err = Surreal().Query(fmt.Sprintf("RELATE vtec_segments:%s->vtec_county_zones->%s", id, t+s.Name+c), map[string]string{})
 
 				if err != nil {
 					return err
 				}
 			}
 		}
+
+		_, err := Surreal().Create("vtec_segments", final)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil

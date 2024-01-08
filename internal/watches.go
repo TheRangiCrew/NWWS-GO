@@ -208,7 +208,16 @@ func ParseWOU(product Product) error {
 
 		vtec := vtecs[0]
 
+		month := padLeft(strconv.Itoa(int(product.Issued.Month())), 2)
+		day := padLeft(strconv.Itoa(product.Issued.Day()), 2)
+		hour := padLeft(strconv.Itoa(product.Issued.Hour()), 2)
+		minute := padLeft(strconv.Itoa(product.Issued.Minute()), 2)
+		second := padLeft(strconv.Itoa(time.Now().Second()), 2)
+
+		id := vtec.ID + month + day + hour + minute + second + padLeft(strconv.Itoa(i), 2)
+
 		final := VTECSegment{
+			ID:        id,
 			VTECUID:   vtec.ID,
 			Original:  segment,
 			Issued:    product.WMO.Issued, // From WMO line

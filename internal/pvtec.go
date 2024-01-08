@@ -187,7 +187,7 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 				return vtecs, errors.New("Failed to parse VTEC query issued time\n" + err.Error())
 			}
 
-			result, err := Surreal().Query("SELECT created_at, vtec FROM vtec_segments WHERE vtec.etn = $etn AND wfo = $wfo AND vtec.phenomena = $phen AND vtec.start > $date - 12h ORDER BY created_at DESC LIMIT 1", map[string]string{
+			result, err := Surreal().Query("SELECT created_at, vtec FROM vtec_segments WHERE vtec.etn = $etn AND wfo = $wfo AND vtec.phenomena = $phen AND vtec.start > $date - 24h ORDER BY created_at DESC LIMIT 1", map[string]string{
 				"etn":  strconv.Itoa(etn),
 				"wfo":  wfo,
 				"phen": phenomena,
@@ -206,7 +206,7 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 			}
 
 			if len(*record) == 0 || len((*record)[0].Result) == 0 {
-				return vtecs, errors.New("no previous VTEC records found. Skipping...")
+				return vtecs, errors.New("no previous VTEC records found. Skipping")
 			}
 
 			start = (*record)[0].Result[0].VTEC.Start
