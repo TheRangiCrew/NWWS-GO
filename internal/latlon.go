@@ -35,6 +35,7 @@ func ParseLatLon(text string) (*LATLON, error) {
 			if err != nil {
 				return nil, errors.New("Failed to parse LAT...LON lat")
 			}
+
 			lonInit, err := strconv.Atoi(s[4:8])
 			if err != nil {
 				return nil, errors.New("Failed to parse LAT...LON lon")
@@ -42,9 +43,10 @@ func ParseLatLon(text string) (*LATLON, error) {
 
 			lat := (float64(latInit) / 100)
 			lon := (float64(lonInit) / 100) * -1
-			if lon < 10.0 {
+			if lon > -20.0 {
 				lon = lon + 100
 			}
+
 			points = append(points, [2]float64{lon, lat})
 		}
 	} else {
@@ -65,9 +67,8 @@ func ParseLatLon(text string) (*LATLON, error) {
 			}
 			points = append(points, [2]float64{lon, lat})
 		}
+		points = append(points, points[0])
 	}
-
-	points = append(points, points[0])
 
 	polygon := PolygonFeature{
 		Type:        "Polygon",
