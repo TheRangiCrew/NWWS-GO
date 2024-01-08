@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+type Segment struct {
+	ID   int
+	Text string
+}
+
 type Product struct {
 	ID     string    `json:"id"`
 	Text   string    `json:"text"`
@@ -119,6 +124,16 @@ func Processor(text string, errCh chan error) {
 		close(errCh)
 		return
 	}
+	if product.AWIPS.Product == "SWO" {
+		if product.AWIPS.WFO == "MCD" {
+			err := ParseMCD(product)
+			if err != nil {
+				errCh <- err
+			}
+			close(errCh)
+			return
+		}
+	}
 
 	segments := strings.Split(text, "$$")
 
@@ -126,11 +141,25 @@ func Processor(text string, errCh chan error) {
 		segments = segments[:len(segments)-1]
 	}
 
-	for _, s := range segments {
+	for i, s := range segments {
+		segment := Segment{
+			ID:   i,
+			Text: s,
+		}
 		vtecs := FindPVTEC(s)
 		if vtecs > 0 {
-			ParseVTECProduct(s, product)
+			err := ParseVTECProduct(segment, product)
+			if err != nil {
+				errCh <- err
+			}
 		}
+
+	}
+
+	// Push the text product to the database
+	_, err = Surreal().Create("text_products", product)
+	if err != nil {
+		errCh <- err
 	}
 
 	close(errCh)
