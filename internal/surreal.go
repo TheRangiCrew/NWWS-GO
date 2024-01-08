@@ -28,14 +28,15 @@ func Surreal() *surrealdb.DB {
 			panic(err)
 		}
 
-		if _, err = db.Signin(map[string]interface{}{
-			"user": username,
-			"pass": password,
-		}); err != nil {
+		if _, err = db.Use(namespace, database); err != nil {
 			panic(err)
 		}
 
-		if _, err = db.Use(database, namespace); err != nil {
+		if _, err = db.Signin(map[string]interface{}{
+			"user": username,
+			"pass": password,
+			"NS":   namespace,
+		}); err != nil {
 			panic(err)
 		}
 

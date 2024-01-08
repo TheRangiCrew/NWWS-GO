@@ -5,7 +5,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - "./surreal/nwws:/db"
+      - "~/surreal/nwws:/db"
     restart: unless-stopped
     command: start --auth file:db
     user: root
