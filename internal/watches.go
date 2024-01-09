@@ -138,43 +138,6 @@ func checkout(watch *Watch, product Product) error {
 		return err
 	}
 
-	for _, vtec := range *watch.VTEC {
-
-		// RELATE the WOU product to the segment
-		_, err = Surreal().Query(fmt.Sprintf("RELATE text_products:%s->vtec_text_products->vtec_segments:%s", watch.WOUProduct.ID, vtec.ID), map[string]string{})
-		if err != nil {
-			return err
-		}
-
-		for _, s := range vtec.UGC.States {
-			var t string
-			if s.Type == "Z" {
-				t = "zones:"
-			} else {
-				t = "counties:"
-			}
-			for _, c := range s.Zones {
-				// RELATE the county/zones to the segment
-				_, err = Surreal().Query(fmt.Sprintf("RELATE vtec_segments:%s->vtec_county_zones->%s", vtec.ID, t+s.Name+c), map[string]string{})
-
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		_, err := Surreal().Create("vtec_segments", vtec)
-		if err != nil {
-			return err
-		}
-
-		// RELATE the watch product to the segment
-		_, err = Surreal().Query(fmt.Sprintf("RELATE severe_watches:%s->watch_vtec->vtec_segments:%s", watch.ID, vtec.ID), map[string]string{})
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -258,46 +221,7 @@ func ParseWOU(product Product) error {
 		return err
 	}
 
-	if len((*currentWatches)[0].Result) == 0 {
-		checkout(watch, product)
-	} else {
-		for _, vtec := range *watch.VTEC {
-
-			// RELATE the WOU product to the segment
-			_, err = Surreal().Query(fmt.Sprintf("RELATE text_products:%s->vtec_text_products->vtec_segments:%s", watch.WOUProduct.ID, vtec.ID), map[string]string{})
-			if err != nil {
-				return err
-			}
-
-			for _, s := range vtec.UGC.States {
-				var t string
-				if s.Type == "Z" {
-					t = "zones:"
-				} else {
-					t = "counties:"
-				}
-				for _, c := range s.Zones {
-					// RELATE the county/zones to the segment
-					_, err = Surreal().Query(fmt.Sprintf("RELATE vtec_segments:%s->vtec_county_zones->%s", vtec.ID, t+s.Name+c), map[string]string{})
-
-					if err != nil {
-						return err
-					}
-				}
-			}
-
-			_, err := Surreal().Create("vtec_segments", vtec)
-			if err != nil {
-				return err
-			}
-
-			// RELATE the watch product to the segment
-			_, err = Surreal().Query(fmt.Sprintf("RELATE severe_watches:%s->watch_vtec->vtec_segments:%s", watch.ID, vtec.ID), map[string]string{})
-			if err != nil {
-				return err
-			}
-		}
-	}
+	checkout(watch, product)
 
 	return nil
 }
