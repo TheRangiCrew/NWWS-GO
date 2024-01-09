@@ -120,7 +120,6 @@ func checkout(watch *Watch, product Product) error {
 	if err != nil {
 		return err
 	}
-
 	// Push the WWP product to the database
 	_, err = Surreal().Create("text_products", watch.WWP.Product)
 	if err != nil {
@@ -175,7 +174,6 @@ func ParseWOU(product Product) error {
 
 		final := VTECSegment{
 			ID:        id,
-			VTECUID:   vtec.ID,
 			Original:  segment,
 			Issued:    product.WMO.Issued, // From WMO line
 			Start:     vtec.Start,         // From VTEC

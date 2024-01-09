@@ -17,16 +17,17 @@ type PVTECQueryResult struct {
 }
 
 type PVTEC struct {
-	ID           string    `json:"-"`
-	Original     string    `json:"original"`
-	Type         string    `json:"type"`
-	Action       string    `json:"action"`
-	WFO          string    `json:"wfo"`
-	Phenomena    string    `json:"phenomena"`
-	Significance string    `json:"significance"`
-	ETN          int       `json:"etn"`
-	Start        time.Time `json:"start"`
-	End          time.Time `json:"end"`
+	ID           string       `json:"-"`
+	Original     string       `json:"original"`
+	Type         string       `json:"type"`
+	Action       string       `json:"action"`
+	WFO          string       `json:"wfo"`
+	Phenomena    string       `json:"phenomena"`
+	Significance string       `json:"significance"`
+	ETN          int          `json:"etn"`
+	Start        time.Time    `json:"start"`
+	End          time.Time    `json:"end"`
+	Parent       *VTECProduct `json:"-"`
 }
 
 const TYPES = "OTEX"
@@ -51,7 +52,7 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 		productType := []rune(segments[0])
 
 		if !strings.ContainsRune(TYPES, productType[0]) {
-			return vtecs, errors.New("Invalid VTEC product type")
+			return vtecs, errors.New("invalid VTEC product type")
 		}
 
 		// Get VTEC action
@@ -66,7 +67,7 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 		}
 
 		if !result {
-			return vtecs, errors.New("Invalid VTEC action")
+			return vtecs, errors.New("invalid VTEC action")
 		}
 
 		// Get WFO
@@ -142,7 +143,7 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 		}
 
 		if !result {
-			return vtecs, errors.New("Invalid VTEC phenomena")
+			return vtecs, errors.New("invalid VTEC phenomena")
 		}
 
 		// Get significance
@@ -157,7 +158,7 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 		}
 
 		if !result {
-			return vtecs, errors.New("Invalid VTEC significance")
+			return vtecs, errors.New("invalid VTEC significance")
 		}
 
 		// Get tracking number
@@ -165,7 +166,33 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 		etn, err := strconv.Atoi(etnString)
 
 		if err != nil {
-			return vtecs, errors.New("Failed to parse VTEC ETN")
+			return vtecs, errors.New("failed to parse VTEC ETN")
+		}
+
+		// Create ID
+		year := strconv.Itoa(issued.Year())
+
+		id := wfo + phenomena + significance + etnString + year
+
+		// Get the most recent record if one exists
+		query := fmt.Sprintf(`SELECT *, count(->vtec_product_segments) AS children FROM vtec_product:%s`, id)
+
+		parentResult, err := Surreal().Query(query, map[string]string{})
+
+		if err != nil {
+			return vtecs, err
+		}
+
+		// NOTE: Surreal returns an array of the result which requires an array to be Unmarshalled. This is referenced later
+		record := new([]surrealdb.RawQuery[[]VTECProduct])
+		err = surrealdb.Unmarshal(parentResult, &record)
+		if err != nil {
+			return vtecs, err
+		}
+
+		var parent *VTECProduct
+		if len((*record)[0].Result) != 0 {
+			parent = &(*record)[0].Result[0]
 		}
 
 		// Get time
@@ -182,38 +209,21 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 		// Sort out start datetime
 
 		if zeroRegexp.MatchString(dateSegments[0]) {
-			t, err := issued.MarshalText()
-
 			if err != nil {
 				return vtecs, errors.New("Failed to parse VTEC query issued time\n" + err.Error())
 			}
 
-			query := fmt.Sprintf(`SELECT created_at, vtec FROM vtec_segments WHERE vtec.etn = %s AND wfo = "%s" AND vtec.phenomena = "%s" AND vtec.start > "%s" - 24h ORDER BY created_at DESC LIMIT 1`, strconv.Itoa(etn), wfo, phenomena, string(t))
-
-			result, err := Surreal().Query(query, map[string]string{})
-
-			if err != nil {
-				return vtecs, err
-			}
-
-			// NOTE: Surreal returns an array of the result which requires an array to be Unmarshalled. This is referenced later
-			record := new([]surrealdb.RawQuery[[]PVTECQueryResult])
-			err = surrealdb.Unmarshal(result, &record)
-			if err != nil {
-				return vtecs, err
-			}
-
-			if len(*record) == 0 || len((*record)[0].Result) == 0 {
+			if parent == nil {
 				return vtecs, errors.New("no previous VTEC records found. Skipping")
 			}
 
-			start = (*record)[0].Result[0].VTEC.Start
+			start = (*record)[0].Result[0].Start
 		} else {
 
 			s, err := time.Parse(layout, dateSegments[0])
 
 			if err != nil {
-				return vtecs, errors.New("Failed to parse VTEC start date")
+				return vtecs, errors.New("failed to parse VTEC start date")
 			}
 
 			start = s
@@ -222,12 +232,8 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 		end, err = time.Parse(layout, dateSegments[1])
 
 		if err != nil {
-			return vtecs, errors.New("Failed to parse VTEC end date")
+			return vtecs, errors.New("failed to parse VTEC end date")
 		}
-
-		year := strconv.Itoa(issued.Year())
-
-		id := wfo + phenomena + significance + etnString + year
 
 		vtecs = append(vtecs, PVTEC{
 			ID:           id,
@@ -240,6 +246,7 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 			ETN:          etn,
 			Start:        start,
 			End:          end,
+			Parent:       parent,
 		})
 	}
 

@@ -110,8 +110,6 @@ func ParseMCD(product Product) error {
 		WatchProbability: watch,
 	}
 
-	fmt.Println(mcd)
-
 	concerningRegexp := regexp.MustCompile(`(Concerning\.\.\.)(Tornado|Severe Thunderstorm) (Watch) [0-9]+`)
 	concerningLine := concerningRegexp.FindString(product.Text)
 	if concerningLine != "" {
