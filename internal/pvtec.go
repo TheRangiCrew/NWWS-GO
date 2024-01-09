@@ -2,6 +2,7 @@ package internal
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -187,12 +188,9 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 				return vtecs, errors.New("Failed to parse VTEC query issued time\n" + err.Error())
 			}
 
-			result, err := Surreal().Query("SELECT created_at, vtec FROM vtec_segments WHERE vtec.etn = $etn AND wfo = $wfo AND vtec.phenomena = $phen AND vtec.start > $date - 24h ORDER BY created_at DESC LIMIT 1", map[string]string{
-				"etn":  strconv.Itoa(etn),
-				"wfo":  wfo,
-				"phen": phenomena,
-				"date": string(t),
-			})
+			query := fmt.Sprintf(`SELECT created_at, vtec FROM vtec_segments WHERE vtec.etn = %s AND wfo = "%s" AND vtec.phenomena = "%s" AND vtec.start > "%s" - 24h ORDER BY created_at DESC LIMIT 1`, strconv.Itoa(etn), wfo, phenomena, string(t))
+
+			result, err := Surreal().Query(query, map[string]string{})
 
 			if err != nil {
 				return vtecs, err
