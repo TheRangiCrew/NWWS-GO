@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -11,20 +12,21 @@ import (
 )
 
 type VTECProduct struct {
-	ID           string    `json:"id"`
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
-	Start        time.Time `json:"start"`
-	End          time.Time `json:"end"`
-	Issued       time.Time `json:"issued"`
-	Expires      time.Time `json:"expires"`
-	EndInitial   time.Time `json:"end_initial"`
-	EventNumber  int       `json:"event_number"`
-	Action       string    `json:"action"`
-	Phenomena    string    `json:"phenomena"`
-	Significance string    `json:"significance"`
-	Title        string    `json:"title,omitempty"`
-	WFO          string    `json:"wfo"`
-	Children     int       `json:"children,omitempty"`
+	ID           string          `json:"id"`
+	UpdatedAt    time.Time       `json:"updated_at,omitempty"`
+	Start        time.Time       `json:"start"`
+	End          time.Time       `json:"end"`
+	Issued       time.Time       `json:"issued"`
+	Expires      time.Time       `json:"expires"`
+	EndInitial   time.Time       `json:"end_initial"`
+	EventNumber  int             `json:"event_number"`
+	Action       string          `json:"action"`
+	Phenomena    string          `json:"phenomena"`
+	Significance string          `json:"significance"`
+	Polygon      *PolygonFeature `json:"polygon"`
+	Title        string          `json:"title,omitempty"`
+	WFO          string          `json:"wfo"`
+	Children     int             `json:"children,omitempty"`
 }
 
 type VTECSegment struct {
@@ -123,6 +125,7 @@ func ParseVTECProduct(segment Segment, product Product) error {
 				Action:       "vtec_actions:" + vtec.Action,
 				Phenomena:    "phenomena:" + vtec.Phenomena,
 				Significance: "vtec_significance:" + vtec.Significance,
+				Polygon:      polygon,
 				WFO:          vtec.WFO,
 				Children:     0,
 			}
@@ -325,16 +328,24 @@ func ParseVTECProduct(segment Segment, product Product) error {
 				return err
 			}
 
-			_, err = Surreal().Update("UPDATE $id SET updated_at = $updated, end = $end, expires = $expires, action = $action", map[string]interface{}{
+			polygon, err := json.Marshal(*final.Polygon)
+			if err != nil {
+				return err
+			}
+			fmt.Println("UPDATE $id SET updated_at = $updated, end = $end, expires = $expires, action = $action, polygon = " + string(polygon))
+
+			r, err := Surreal().Query("UPDATE $id SET updated_at = $updated, end = $end, expires = $expires, action = $action, polygon = "+string(polygon), map[string]interface{}{
 				"id":      parent.ID,
 				"updated": string(updatedAt),
 				"end":     string(end),
 				"expires": string(expires),
 				"action":  final.Action,
+				"polygon": string(polygon),
 			})
 			if err != nil {
 				return err
 			}
+			fmt.Println(r)
 		}
 
 	}
