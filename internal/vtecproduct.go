@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/surrealdb/surrealdb.go"
@@ -52,7 +53,7 @@ type VTECSegment struct {
 	WFO          string          `json:"wfo"`
 }
 
-func ParseVTECProduct(segment Segment, product Product) error {
+func ParseVTECProductSegment(segment Segment, product Product) error {
 
 	emergencyRegexp := regexp.MustCompile(`(TORNADO|FLASH\s+FLOOD)\s+EMERGENCY`)
 	pdsRegexp := regexp.MustCompile(`THIS\s+IS\s+A\s+PARTICULARLY\s+DANGEROUS\s+SITUATION`)
@@ -174,13 +175,13 @@ func ParseVTECProduct(segment Segment, product Product) error {
 		/*
 			Push the VTEC segments first to make sure that will actually work
 		*/
-		// RELATE the text product to the segment
-		_, err = Surreal().Query(fmt.Sprintf("RELATE text_products:%s->vtec_text_products->vtec_segment:%s", product.ID, id), map[string]string{})
+		_, err = Surreal().Create("vtec_segment", final)
 		if err != nil {
 			return err
 		}
 
-		_, err = Surreal().Create("vtec_segment", final)
+		// RELATE the text product to the segment
+		_, err = Surreal().Query(fmt.Sprintf("RELATE text_products:%s->vtec_text_products->vtec_segment:%s", product.ID, id), map[string]string{})
 		if err != nil {
 			return err
 		}
@@ -355,8 +356,29 @@ func ParseVTECProduct(segment Segment, product Product) error {
 
 	}
 
+	return nil
+}
+
+func ParseVTECProduct(product Product) error {
+	segments := strings.Split(product.Text, "$$")
+
+	if len(segments) > 1 {
+		segments = segments[:len(segments)-1]
+	}
+
+	for i, s := range segments {
+		segment := Segment{
+			ID:   i,
+			Text: s,
+		}
+		err := ParseVTECProductSegment(segment, product)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Push the text product to the database
-	_, err = Surreal().Create("text_products", product)
+	_, err := Surreal().Create("text_products", product)
 	if err != nil {
 		return err
 	}

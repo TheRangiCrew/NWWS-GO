@@ -135,28 +135,16 @@ func Processor(text string, errCh chan error) {
 		}
 	}
 
-	segments := strings.Split(text, "$$")
-
-	if len(segments) > 1 {
-		segments = segments[:len(segments)-1]
-	}
-
-	for i, s := range segments {
-		segment := Segment{
-			ID:   i,
-			Text: s,
+	vtecs := FindPVTEC(product.Text)
+	switch {
+	case vtecs > 0:
+		err := ParseVTECProduct(product)
+		if err != nil {
+			errCh <- err
 		}
-		vtecs := FindPVTEC(s)
-		switch {
-		case vtecs > 0:
-			err := ParseVTECProduct(segment, product)
-			if err != nil {
-				errCh <- err
-			}
-		default:
-			close(errCh)
-			return
-		}
+	default:
+		close(errCh)
+		return
 	}
 
 	close(errCh)
