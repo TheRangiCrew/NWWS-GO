@@ -328,11 +328,12 @@ func ParseVTECProduct(segment Segment, product Product) error {
 				return err
 			}
 
+if polygon != nil {
 			polygon, err := json.Marshal(*final.Polygon)
 			if err != nil {
 				return err
 			}
-			fmt.Println("UPDATE $id SET updated_at = $updated, end = $end, expires = $expires, action = $action, polygon = " + string(polygon))
+}
 
 			r, err := Surreal().Query("UPDATE $id SET updated_at = $updated, end = $end, expires = $expires, action = $action, polygon = "+string(polygon), map[string]interface{}{
 				"id":      parent.ID,
@@ -345,7 +346,6 @@ func ParseVTECProduct(segment Segment, product Product) error {
 			if err != nil {
 				return err
 			}
-			fmt.Println(r)
 		}
 
 	}
