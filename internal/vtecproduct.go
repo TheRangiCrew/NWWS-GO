@@ -195,6 +195,9 @@ func ParseVTECProduct(segment Segment, product Product) error {
 		if parent.End.Compare(final.End) < 0 {
 			parent.End = final.End
 		}
+		if parent.EndInitial.Compare(final.End) > 0 {
+			parent.EndInitial = final.End
+		}
 		if parent.Expires.Compare(final.Expires) < 0 {
 			parent.Expires = final.Expires
 		}
@@ -310,7 +313,6 @@ func ParseVTECProduct(segment Segment, product Product) error {
 
 		// And finally... push the product
 		if newParent {
-			fmt.Println(parent.Polygon)
 			_, err = Surreal().Create("vtec_product", parent)
 			if err != nil {
 				return err
@@ -351,6 +353,12 @@ func ParseVTECProduct(segment Segment, product Product) error {
 			}
 		}
 
+	}
+
+	// Push the text product to the database
+	_, err = Surreal().Create("text_products", product)
+	if err != nil {
+		return err
 	}
 
 	return nil
