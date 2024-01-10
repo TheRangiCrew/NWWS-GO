@@ -328,6 +328,7 @@ func ParseVTECProduct(segment Segment, product Product) error {
 				return err
 			}
 
+			var polygon byte[]
 if final.Polygon != nil {
 			polygon, err := json.Marshal(*final.Polygon)
 			if err != nil {
@@ -335,7 +336,7 @@ if final.Polygon != nil {
 			}
 }
 
-			r, err := Surreal().Query("UPDATE $id SET updated_at = $updated, end = $end, expires = $expires, action = $action, polygon = "+string(polygon), map[string]interface{}{
+			_, err = Surreal().Query("UPDATE $id SET updated_at = $updated, end = $end, expires = $expires, action = $action, polygon = "+string(polygon), map[string]interface{}{
 				"id":      parent.ID,
 				"updated": string(updatedAt),
 				"end":     string(end),
