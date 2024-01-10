@@ -330,7 +330,7 @@ func ParseVTECProduct(segment Segment, product Product) error {
 
 			var polygon []byte
 if final.Polygon != nil {
-			polygon, err := json.Marshal(*final.Polygon)
+			polygon, err = json.Marshal(*final.Polygon)
 			if err != nil {
 				return err
 			}
