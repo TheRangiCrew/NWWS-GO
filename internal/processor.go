@@ -34,7 +34,7 @@ func Processor(text string, errCh chan error) {
 		return
 	}
 
-	issuedRegexp := regexp.MustCompile("(?m:^[0-9]{3,4} ((AM|PM) [A-Z]{3,4}|UTC) ([A-Za-z]{3} ){2}[0-9]{1,2} [0-9]{4})")
+	issuedRegexp := regexp.MustCompile("(?m:^[0-9]{3,4} ((AM|PM) [A-Za-z]{3,4}|UTC) ([A-Za-z]{3} ){2}[0-9]{1,2} [0-9]{4})")
 	issuedString := issuedRegexp.FindString(text)
 
 	var issued time.Time
