@@ -328,7 +328,7 @@ func ParseVTECProduct(segment Segment, product Product) error {
 				return err
 			}
 
-if polygon != nil {
+if final.Polygon != nil {
 			polygon, err := json.Marshal(*final.Polygon)
 			if err != nil {
 				return err
