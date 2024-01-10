@@ -23,7 +23,7 @@ type VTECProduct struct {
 	Action       string          `json:"action"`
 	Phenomena    string          `json:"phenomena"`
 	Significance string          `json:"significance"`
-	Polygon      *PolygonFeature `json:"polygon"`
+	Polygon      *PolygonFeature `json:"polygon,omitempty"`
 	Title        string          `json:"title,omitempty"`
 	WFO          string          `json:"wfo"`
 	Children     int             `json:"children,omitempty"`
@@ -310,6 +310,7 @@ func ParseVTECProduct(segment Segment, product Product) error {
 
 		// And finally... push the product
 		if newParent {
+			fmt.Println(parent.Polygon)
 			_, err = Surreal().Create("vtec_product", parent)
 			if err != nil {
 				return err
@@ -329,13 +330,13 @@ func ParseVTECProduct(segment Segment, product Product) error {
 			}
 
 			polygon := "NONE"
-if final.Polygon != nil {
-			polygonJSON, err := json.Marshal(*final.Polygon)
-			if err != nil {
-				return err
+			if final.Polygon != nil {
+				polygonJSON, err := json.Marshal(*final.Polygon)
+				if err != nil {
+					return err
+				}
+				polygon = string(polygonJSON)
 			}
-			polygon = string(polygonJSON)
-}
 
 			_, err = Surreal().Query("UPDATE $id SET updated_at = $updated, end = $end, expires = $expires, action = $action, polygon = "+string(polygon), map[string]interface{}{
 				"id":      parent.ID,
