@@ -18,12 +18,13 @@ type Segment struct {
 }
 
 type Product struct {
-	ID     string    `json:"id"`
-	Text   string    `json:"text"`
-	WMO    WMO       `json:"wmo"`
-	AWIPS  AWIPS     `json:"awips"`
-	BIL    string    `json:"bil,omitempty"`
-	Issued time.Time `json:"issued"`
+	ID      string    `json:"id"`
+	GroupID string    `json:"group"`
+	Text    string    `json:"text"`
+	WMO     WMO       `json:"wmo"`
+	AWIPS   AWIPS     `json:"awips"`
+	BIL     string    `json:"bil,omitempty"`
+	Issued  time.Time `json:"issued"`
 }
 
 func Processor(text string, errCh chan error) {
@@ -87,32 +88,35 @@ func Processor(text string, errCh chan error) {
 	day := padLeft(strconv.Itoa(issued.Day()), 2)
 	hour := padLeft(strconv.Itoa(issued.Hour()), 2)
 	minute := padLeft(strconv.Itoa(issued.Minute()), 2)
-	seconds := padLeft(strconv.Itoa(time.Now().Second()), 2)
 
-	sequence := 1
+	group := wmo.WFO + awips.Product + year + month + day + hour + minute
 
-	id := wmo.WFO + awips.Product + year + month + day + hour + minute + seconds
-
-	txt, err := Surreal().Query("SELECT id FROM text_products:"+product.ID, map[string]interface{}{})
+	txt, err := Surreal().Query(fmt.Sprintf("SELECT group FROM text_products WHERE group == '%s'", group), map[string]interface{}{})
+	if err != nil {
+		errCh <- err
+	}
 	record := new([]surrealdb.RawQuery[[]struct {
-		ID string `json:"id"`
+		Group string `json:"group"`
 	}])
 	err = surrealdb.Unmarshal(txt, &record)
 	if err != nil {
 		errCh <- err
 	}
 
-	sequence := len((*record)[0].Result) + 1
+	sequence := len((*record)[0].Result)
+
+	id := group + padLeft(strconv.Itoa(sequence), 2)
 
 	println(id)
 
 	product := Product{
-		ID:     id,
-		Text:   text,
-		WMO:    wmo,
-		AWIPS:  awips,
-		BIL:    bil,
-		Issued: issued,
+		ID:      id,
+		GroupID: group,
+		Text:    text,
+		WMO:     wmo,
+		AWIPS:   awips,
+		BIL:     bil,
+		Issued:  issued,
 	}
 
 	// Send products that need special treatment on their way
