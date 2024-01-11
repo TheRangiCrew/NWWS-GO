@@ -63,7 +63,7 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 		return err
 	}
 
-	vtecs, err := ParsePVTEC(segment.Text, product.Issued)
+	vtecs, err := ParsePVTEC(segment.Text, product.Issued, ugc)
 	if err != nil {
 		return err
 	}
@@ -375,12 +375,6 @@ func ParseVTECProduct(product Product) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	// Push the text product to the database
-	_, err := Surreal().Create("text_products", product)
-	if err != nil {
-		return err
 	}
 
 	return nil

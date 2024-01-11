@@ -139,12 +139,6 @@ func ParseMCD(product Product) error {
 		return err
 	}
 
-	// Push the WOU product to the database
-	_, err = Surreal().Create("text_products", product)
-	if err != nil {
-		return err
-	}
-
 	// RELATE the text product to the mcd
 	_, err = Surreal().Query(fmt.Sprintf("RELATE text_products:%s->mcd_text_products->mcd:%s", product.ID, mcd.ID), map[string]string{})
 	if err != nil {

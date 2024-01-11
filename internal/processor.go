@@ -143,8 +143,12 @@ func Processor(text string, errCh chan error) {
 			errCh <- err
 		}
 	default:
-		close(errCh)
-		return
+	}
+
+	// Push the text product to the database
+	_, err = Surreal().Create("text_products", product)
+	if err != nil {
+		errCh <- err
 	}
 
 	close(errCh)
