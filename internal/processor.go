@@ -152,8 +152,9 @@ func Processor(text string, errCh chan error) {
 	_, err = Surreal().Create("text_products", product)
 	if err != nil {
 		errCh <- err
+		close(errCh)
+		return
 	}
-	close(errCh)
 
 	// Send products that need special treatment on their way
 	// Severe Watches
