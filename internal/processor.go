@@ -148,6 +148,13 @@ func Processor(text string, errCh chan error) {
 		Issued:  issued,
 	}
 
+	// Push the text product to the database
+	_, err = Surreal().Create("text_products", product)
+	if err != nil {
+		errCh <- err
+	}
+	close(errCh)
+
 	// Send products that need special treatment on their way
 	// Severe Watches
 	if product.AWIPS.Product == "WOU" {
@@ -195,11 +202,6 @@ func Processor(text string, errCh chan error) {
 	default:
 	}
 
-	// Push the text product to the database
-	_, err = Surreal().Create("text_products", product)
-	if err != nil {
-		errCh <- err
-	}
 	close(errCh)
 
 }
