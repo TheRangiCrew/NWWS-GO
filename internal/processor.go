@@ -66,14 +66,16 @@ func Processor(text string, errCh chan error) {
 	var issued time.Time
 
 	if issuedString != "" {
-		tzString := strings.Split(issuedString, " ")[2]
-		if tzString == "UTC" {
-			issued, err = time.ParseInLocation("1504 UTC Mon Jan 2 2006", issuedString, timezones[tzString])
+		utcRegexp := regexp.MustCompile("UTC")
+		utc := utcRegexp.MatchString(issuedString)
+		if utc {
+			issued, err = time.ParseInLocation("1504 UTC Mon Jan 2 2006", issuedString, timezones["UTC"])
 		} else {
 			/*
 				Since the time package cannot handle the time format that is provided in the NWS text products,
 				we have to modify the string to include a clearer seperator between the hour and the minute values
 			*/
+			tzString := strings.Split(issuedString, " ")[2]
 			tz := timezones[tzString]
 			if tz == nil {
 				errCh <- errors.New("Missing timezone " + tzString + " AWIPS: " + awips.Original)
