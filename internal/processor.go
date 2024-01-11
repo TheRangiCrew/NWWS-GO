@@ -2,6 +2,7 @@ package internal
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -37,6 +38,8 @@ func Processor(text string, errCh chan error) {
 	issuedRegexp := regexp.MustCompile("(?m:^[0-9]{3,4} ((AM|PM) [A-Za-z]{3,4}|UTC) ([A-Za-z]{3} ){2}[0-9]{1,2} [0-9]{4})")
 	issuedString := issuedRegexp.FindString(text)
 
+	fmt.Println(issuedString)
+
 	var issued time.Time
 
 	if issuedString != "" {
@@ -65,7 +68,7 @@ func Processor(text string, errCh chan error) {
 		}
 	} else {
 		log.Println("Cannot find issued date line. Defaulting to now...")
-		issued = time.Now()
+		issued = time.Now().UTC()
 	}
 
 	wmo, err := ParseWMO(text, issued)
