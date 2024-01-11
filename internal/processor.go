@@ -41,7 +41,6 @@ func Processor(text string, errCh chan error) {
 	issuedRegexp := regexp.MustCompile("(?m:^[0-9]{3,4} ((AM|PM) [A-Za-z]{3,4}|UTC) ([A-Za-z]{3} ){2}[0-9]{1,2} [0-9]{4})")
 	issuedString := issuedRegexp.FindString(text)
 
-	tz := strings.Split(issuedString, " ")[2]
 	timezones := map[string]*time.Location{
 		"UTC":  time.FixedZone("UTC", 0*60*60),
 		"AST":  time.FixedZone("AST", -4*60*60),
@@ -63,6 +62,7 @@ func Processor(text string, errCh chan error) {
 	var issued time.Time
 
 	if issuedString != "" {
+		tz := strings.Split(issuedString, " ")[2]
 		if tz == "UTC" {
 			issued, err = time.ParseInLocation("1504 UTC Mon Jan 2 2006", issuedString, timezones[tz])
 		} else {
