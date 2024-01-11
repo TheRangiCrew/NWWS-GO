@@ -87,7 +87,7 @@ func Processor(text string, errCh chan error) {
 			return
 		}
 	} else {
-		log.Println("Cannot find issued date line. Defaulting to now...")
+		log.Println("Cannot find issued date line. Defaulting to now... " + awips.Original)
 		issued = time.Now().UTC()
 	}
 
