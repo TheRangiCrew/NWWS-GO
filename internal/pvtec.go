@@ -38,7 +38,7 @@ func FindPVTEC(text string) int {
 	return len(result)
 }
 
-func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
+func ParsePVTEC(text string, issued time.Time, ugc UGC) ([]PVTEC, error) {
 	vtecRegex := regexp.MustCompile("([A-Z]).([A-Z]+).([A-Z]+).([A-Z]+).([A-Z]).([0-9]+).([0-9TZ]+)-([0-9TZ]+)")
 	instances := vtecRegex.FindAllString(text, -1)
 
@@ -214,10 +214,11 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 			}
 
 			if parent == nil {
-				return vtecs, errors.New("no previous VTEC records found. Skipping")
+				start = issued
+			} else {
+				start = (*record)[0].Result[0].Start
 			}
 
-			start = (*record)[0].Result[0].Start
 		} else {
 
 			s, err := time.Parse(layout, dateSegments[0])
@@ -229,10 +230,17 @@ func ParsePVTEC(text string, issued time.Time) ([]PVTEC, error) {
 			start = s
 		}
 
-		end, err = time.Parse(layout, dateSegments[1])
+		if zeroRegexp.MatchString(dateSegments[1]) {
+			end = ugc.Expires
+		} else {
 
-		if err != nil {
-			return vtecs, errors.New("failed to parse VTEC end date")
+			e, err := time.Parse(layout, dateSegments[1])
+
+			if err != nil {
+				return vtecs, errors.New("failed to parse VTEC end date")
+			}
+
+			end = e
 		}
 
 		vtecs = append(vtecs, PVTEC{
