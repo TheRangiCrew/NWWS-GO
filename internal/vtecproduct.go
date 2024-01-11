@@ -131,9 +131,6 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 			newParent = true
 		}
 
-		fmt.Println(parent.Children)
-		fmt.Println(newParent)
-
 		id := vtec.ID + strconv.Itoa(parent.Children)
 
 		final := VTECSegment{
