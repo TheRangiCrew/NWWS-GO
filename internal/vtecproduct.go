@@ -193,6 +193,9 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 		}
 
 		parent.UpdatedAt = time.Now()
+		if parent.Start.Compare(final.Start) > 0 {
+			parent.Start = final.Start
+		}
 		if parent.End.Compare(final.End) < 0 {
 			parent.End = final.End
 		}
@@ -243,17 +246,21 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 					if len((*cz)[0].Result[0].CZ) != 0 {
 						update := false
 						current := (*cz)[0].Result[0].CZ[0]
+						if current.Start.Compare(final.Start) > 0 {
+							current.Start = final.Start
+							update = true
+						}
 						if current.End.Compare(final.End) < 0 {
 							current.End = final.End
 							update = true
 						}
 						if current.Expires.Compare(parent.Expires) < 0 {
-							update = true
 							current.Expires = parent.Expires
+							update = true
 						}
 						if current.Action != final.Action {
-							update = true
 							current.Action = final.Action
+							update = true
 						}
 						if update {
 							end, err := (current.End.MarshalText())
