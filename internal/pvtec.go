@@ -210,19 +210,25 @@ func ParsePVTEC(text string, issued time.Time, ugc UGC) ([]PVTEC, error) {
 
 		if zeroRegexp.MatchString(dateSegments[0]) {
 			if err != nil {
+				return vtecs, errors.New("Failed to find UTC\n" + err.Error())
+			}
+
+			if err != nil {
 				return vtecs, errors.New("Failed to parse VTEC query issued time\n" + err.Error())
 			}
 
 			if parent == nil {
 				start = issued
 			} else {
-				start = (*record)[0].Result[0].Start
+				if parent.Start.Compare(start) > 0 {
+					start = issued
+				} else {
+					start = parent.Start
+				}
 			}
 
 		} else {
-
 			s, err := time.Parse(layout, dateSegments[0])
-
 			if err != nil {
 				return vtecs, errors.New("failed to parse VTEC start date")
 			}

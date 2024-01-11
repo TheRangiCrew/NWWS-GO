@@ -63,7 +63,7 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 		return err
 	}
 
-	vtecs, err := ParsePVTEC(segment.Text, product.Issued, ugc)
+	vtecs, err := ParsePVTEC(segment.Text, product.Issued.UTC(), ugc)
 	if err != nil {
 		return err
 	}
@@ -138,9 +138,9 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 		final := VTECSegment{
 			ID:           id,
 			Original:     segment.Text,
-			Issued:       product.Issued, // From WMO line
 			Start:        vtec.Start,     // From VTEC
 			End:          vtec.End,       // From VTEC
+			Issued:       product.Issued, // From WMO line
 			Expires:      ugc.Expires,    // From UGC
 			EventNumber:  vtec.ETN,
 			Action:       "vtec_actions:" + vtec.Action,
@@ -195,6 +195,9 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 		parent.UpdatedAt = time.Now()
 		if parent.Start.Compare(final.Start) > 0 {
 			parent.Start = final.Start
+		}
+		if parent.Issued.Compare(final.Issued) > 0 {
+			parent.Issued = final.Issued
 		}
 		if parent.End.Compare(final.End) < 0 {
 			parent.End = final.End

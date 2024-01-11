@@ -41,16 +41,30 @@ func Processor(text string, errCh chan error) {
 	issuedRegexp := regexp.MustCompile("(?m:^[0-9]{3,4} ((AM|PM) [A-Za-z]{3,4}|UTC) ([A-Za-z]{3} ){2}[0-9]{1,2} [0-9]{4})")
 	issuedString := issuedRegexp.FindString(text)
 
-	fmt.Println(issuedString)
+	tz := strings.Split(issuedString, " ")[2]
+	timezones := map[string]*time.Location{
+		"UTC":  time.FixedZone("UTC", 0*60*60),
+		"AST":  time.FixedZone("AST", -4*60*60),
+		"EST":  time.FixedZone("EST", -5*60*60),
+		"EDT":  time.FixedZone("EDT", -5*60*60),
+		"CST":  time.FixedZone("CST", -6*60*60),
+		"CDT":  time.FixedZone("CDT", -5*60*60),
+		"MST":  time.FixedZone("MST", -7*60*60),
+		"MDT":  time.FixedZone("MDT", -6*60*60),
+		"PST":  time.FixedZone("PST", -8*60*60),
+		"PDT":  time.FixedZone("PDT", -7*60*60),
+		"AKST": time.FixedZone("AKST", -9*60*60),
+		"AKDT": time.FixedZone("AKDT", -8*60*60),
+		"HST":  time.FixedZone("HST", -10*60*60),
+		"SST":  time.FixedZone("SST", -11*60*60),
+		"CHST": time.FixedZone("CHST", 10*60*60),
+	}
 
 	var issued time.Time
 
 	if issuedString != "" {
-		utcRegexp := regexp.MustCompile("UTC")
-		utc := utcRegexp.MatchString(issuedString)
-
-		if utc {
-			issued, err = time.Parse("1504 UTC Mon Jan 2 2006", issuedString)
+		if tz == "UTC" {
+			issued, err = time.ParseInLocation("1504 UTC Mon Jan 2 2006", issuedString, timezones[tz])
 		} else {
 			/*
 				Since the time package cannot handle the time format that is provided in the NWS text products,
@@ -62,7 +76,9 @@ func Processor(text string, errCh chan error) {
 			minutes := t[len(t)-2:]
 			split[0] = hours + ":" + minutes
 			new := strings.Join(split, " ")
-			issued, err = time.Parse("3:04 PM MST Mon Jan 2 2006", new)
+			new = strings.Replace(new, tz+" ", "", -1)
+			issued, err = time.ParseInLocation("3:04 PM Mon Jan 2 2006", new, timezones[tz])
+			issued = issued.UTC()
 		}
 
 		if err != nil {
