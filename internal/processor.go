@@ -38,7 +38,7 @@ func Processor(text string, errCh chan error) {
 		return
 	}
 
-	issuedRegexp := regexp.MustCompile("(?m:^[0-9]{3,4} ((AM|PM) [A-Za-z]{3,4}|UTC) ([A-Za-z]{3} ){2}[0-9]{1,2} [0-9]{4})")
+	issuedRegexp := regexp.MustCompile("[0-9]{3,4} ((AM|PM) [A-Za-z]{3,4}|UTC) ([A-Za-z]{3} ){2}[0-9]{1,2} [0-9]{4}")
 	issuedString := issuedRegexp.FindString(text)
 
 	timezones := map[string]*time.Location{
@@ -56,6 +56,7 @@ func Processor(text string, errCh chan error) {
 		"AKDT": time.FixedZone("AKDT", -8*60*60),
 		"HST":  time.FixedZone("HST", -10*60*60),
 		"SST":  time.FixedZone("SST", -11*60*60),
+		"ChST": time.FixedZone("CHST", 10*60*60),
 		"CHST": time.FixedZone("CHST", 10*60*60),
 	}
 
