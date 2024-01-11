@@ -72,7 +72,6 @@ func Processor(text string, errCh chan error) {
 	}
 
 	wmo, err := ParseWMO(text, issued)
-
 	if err != nil {
 		errCh <- err
 		return
