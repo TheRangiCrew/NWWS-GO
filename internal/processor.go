@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/surrealdb/surrealdb.go"
 )
 
 type Segment struct {
@@ -87,7 +89,20 @@ func Processor(text string, errCh chan error) {
 	minute := padLeft(strconv.Itoa(issued.Minute()), 2)
 	seconds := padLeft(strconv.Itoa(time.Now().Second()), 2)
 
+	sequence := 1
+
 	id := wmo.WFO + awips.Product + year + month + day + hour + minute + seconds
+
+	txt, err := Surreal().Query("SELECT id FROM text_products:"+product.ID, map[string]interface{}{})
+	record := new([]surrealdb.RawQuery[[]struct {
+		ID string `json:"id"`
+	}])
+	err = surrealdb.Unmarshal(txt, &record)
+	if err != nil {
+		errCh <- err
+	}
+
+	sequence := len((*record)[0].Result) + 1
 
 	println(id)
 
