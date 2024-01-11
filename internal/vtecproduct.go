@@ -96,9 +96,7 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 
 		// Get the most recent record if one exists (just to be safe)
 		query := fmt.Sprintf(`SELECT *, count(->vtec_product_segments) AS children FROM vtec_product:%s`, vtec.ID)
-
 		parentResult, err := Surreal().Query(query, map[string]string{})
-
 		if err != nil {
 			return err
 		}

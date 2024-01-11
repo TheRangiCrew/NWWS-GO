@@ -3,7 +3,6 @@ package internal
 import (
 	"errors"
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -31,10 +30,14 @@ func Processor(text string, errCh chan error) {
 
 	var err error
 
-	awips, err := ParseAWIPS(text)
-
+	awips := ParseAWIPS(text)
 	if err != nil {
 		errCh <- err
+		close(errCh)
+		return
+	}
+	if awips == nil {
+		close(errCh)
 		return
 	}
 
@@ -63,37 +66,44 @@ func Processor(text string, errCh chan error) {
 	var issued time.Time
 
 	if issuedString != "" {
-		tz := strings.Split(issuedString, " ")[2]
-		if tz == "UTC" {
-			issued, err = time.ParseInLocation("1504 UTC Mon Jan 2 2006", issuedString, timezones[tz])
+		tzString := strings.Split(issuedString, " ")[2]
+		if tzString == "UTC" {
+			issued, err = time.ParseInLocation("1504 UTC Mon Jan 2 2006", issuedString, timezones[tzString])
 		} else {
 			/*
 				Since the time package cannot handle the time format that is provided in the NWS text products,
 				we have to modify the string to include a clearer seperator between the hour and the minute values
 			*/
+			tz := timezones[tzString]
+			if tz == nil {
+				errCh <- errors.New("Missing timezone " + tzString + " AWIPS: " + awips.Original)
+				close(errCh)
+				return
+			}
 			split := strings.Split(issuedString, " ")
 			t := split[0]
 			hours := t[:len(t)-2]
 			minutes := t[len(t)-2:]
 			split[0] = hours + ":" + minutes
 			new := strings.Join(split, " ")
-			new = strings.Replace(new, tz+" ", "", -1)
-			issued, err = time.ParseInLocation("3:04 PM Mon Jan 2 2006", new, timezones[tz])
+			new = strings.Replace(new, tzString+" ", "", -1)
+			issued, err = time.ParseInLocation("3:04 PM Mon Jan 2 2006", new, tz)
 			issued = issued.UTC()
 		}
 
 		if err != nil {
 			errCh <- errors.New("Could not parse issued date line for AWIPS: " + awips.Original)
+			close(errCh)
 			return
 		}
 	} else {
-		log.Println("Cannot find issued date line. Defaulting to now... " + awips.Original)
 		issued = time.Now().UTC()
 	}
 
 	wmo, err := ParseWMO(text, issued)
 	if err != nil {
 		errCh <- err
+		close(errCh)
 		return
 	}
 
@@ -131,7 +141,7 @@ func Processor(text string, errCh chan error) {
 		GroupID: group,
 		Text:    text,
 		WMO:     wmo,
-		AWIPS:   awips,
+		AWIPS:   *awips,
 		BIL:     bil,
 		Issued:  issued,
 	}
@@ -188,7 +198,6 @@ func Processor(text string, errCh chan error) {
 	if err != nil {
 		errCh <- err
 	}
-
 	close(errCh)
 
 }

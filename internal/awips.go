@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"errors"
 	"regexp"
 )
 
@@ -11,20 +10,20 @@ type AWIPS struct {
 	WFO      string `json:"wfo"`
 }
 
-func ParseAWIPS(text string) (AWIPS, error) {
+func ParseAWIPS(text string) *AWIPS {
 	awipsRegex := regexp.MustCompile("(?m:^[A-Z0-9]{4,6}\n)")
 	original := awipsRegex.FindString(text)
 	if original == "" {
-		return AWIPS{}, errors.New("could not find AWIPS ID")
+		return nil
 	}
 	original = original[:len(original)-1]
 
 	product := original[0:3]
 	wfo := original[3:]
 
-	return AWIPS{
+	return &AWIPS{
 		Original: original,
 		Product:  product,
 		WFO:      wfo,
-	}, nil
+	}
 }
