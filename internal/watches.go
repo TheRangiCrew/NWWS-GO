@@ -115,24 +115,7 @@ func checkout(watch *Watch, product Product) error {
 		return nil
 	}
 
-	// Push the SEL product to the database
-	_, err := Surreal().Create("text_products", watch.SELProduct)
-	if err != nil {
-		return err
-	}
-	// Push the WWP product to the database
-	_, err = Surreal().Create("text_products", watch.WWP.Product)
-	if err != nil {
-		return err
-	}
-
-	// Push the WOU product to the database
-	_, err = Surreal().Create("text_products", watch.WOUProduct)
-	if err != nil {
-		return err
-	}
-
-	_, err = Surreal().Create("severe_watches", *watch)
+	_, err := Surreal().Create("severe_watches", *watch)
 	if err != nil {
 		return err
 	}
@@ -153,7 +136,7 @@ func ParseWOU(product Product) error {
 			return err
 		}
 
-		vtecs, err := ParsePVTEC(segment, product.Issued)
+		vtecs, err := ParsePVTEC(segment, product.Issued, ugc)
 		if err != nil {
 			return err
 		}
