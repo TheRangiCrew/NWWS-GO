@@ -72,6 +72,7 @@ func ParsePVTEC(text string, issued time.Time, ugc UGC) ([]PVTEC, error) {
 
 		// Get WFO
 		wfo := segments[2]
+		wfo = wfo[1:]
 
 		// Get phenomena
 		phenomena := segments[3]

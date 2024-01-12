@@ -40,7 +40,7 @@ func ParseUGC(text string, issued time.Time) (UGC, error) {
 	if endIndex == nil {
 		return UGC{}, errors.New("Could not find UGC string!")
 	}
-	// Subtract 2 to remove the \n and - at the end of the UGC
+	// Subtract 1 to remove the - at the end of the UGC
 	original := start[:endIndex[1]-1]
 
 	original = strings.ReplaceAll(original, "\n", "")

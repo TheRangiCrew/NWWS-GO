@@ -125,7 +125,7 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 				Phenomena:    "phenomena:" + vtec.Phenomena,
 				Significance: "vtec_significance:" + vtec.Significance,
 				Polygon:      polygon,
-				WFO:          vtec.WFO,
+				WFO:          "wfo:" + vtec.WFO,
 				Children:     0,
 			}
 			newParent = true
@@ -153,7 +153,7 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 			HazardTags:   hazardTags,
 			Emergency:    emergency,
 			PDS:          pds,
-			WFO:          product.WMO.WFO,
+			WFO:          "wfo:" + vtec.WFO,
 		}
 
 		// Verify products a little bit
@@ -243,45 +243,44 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 					return err
 				}
 
-				if len((*cz)[0].Result) != 0 {
-					if len((*cz)[0].Result[0].CZ) != 0 {
-						update := false
-						current := (*cz)[0].Result[0].CZ[0]
-						if current.Start.Compare(final.Start) > 0 {
-							current.Start = final.Start
-							update = true
-						}
-						if current.End.Compare(final.End) < 0 {
-							current.End = final.End
-							update = true
-						}
-						if current.Expires.Compare(parent.Expires) < 0 {
-							current.Expires = parent.Expires
-							update = true
-						}
-						if current.Action != final.Action {
-							current.Action = final.Action
-							update = true
-						}
-						if update {
-							end, err := (current.End.MarshalText())
-							if err != nil {
-								return err
-							}
-							expires, err := (current.Expires.MarshalText())
-							if err != nil {
-								return err
-							}
+				if len((*cz)[0].Result) != 0 && len((*cz)[0].Result[0].CZ) != 0 {
 
-							_, err = Surreal().Query("UPDATE $id SET end = $end, expires = $expires, action = $action", map[string]interface{}{
-								"id":      current.ID,
-								"end":     string(end),
-								"expires": string(expires),
-								"action":  current.Action,
-							})
-							if err != nil {
-								return err
-							}
+					update := false
+					current := (*cz)[0].Result[0].CZ[0]
+					if current.Start.Compare(final.Start) > 0 {
+						current.Start = final.Start
+						update = true
+					}
+					if current.End.Compare(final.End) < 0 {
+						current.End = final.End
+						update = true
+					}
+					if current.Expires.Compare(parent.Expires) < 0 {
+						current.Expires = parent.Expires
+						update = true
+					}
+					if current.Action != final.Action {
+						current.Action = final.Action
+						update = true
+					}
+					if update {
+						end, err := (current.End.MarshalText())
+						if err != nil {
+							return err
+						}
+						expires, err := (current.Expires.MarshalText())
+						if err != nil {
+							return err
+						}
+
+						_, err = Surreal().Query("UPDATE $id SET end = $end, expires = $expires, action = $action", map[string]interface{}{
+							"id":      current.ID,
+							"end":     string(end),
+							"expires": string(expires),
+							"action":  current.Action,
+						})
+						if err != nil {
+							return err
 						}
 					}
 				} else {

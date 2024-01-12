@@ -24,6 +24,7 @@ type Product struct {
 	AWIPS   AWIPS     `json:"awips"`
 	BIL     string    `json:"bil,omitempty"`
 	Issued  time.Time `json:"issued"`
+	WFO     string    `json:"wfo"`
 }
 
 func Processor(text string, errCh chan error) {
@@ -118,7 +119,7 @@ func Processor(text string, errCh chan error) {
 	hour := padLeft(strconv.Itoa(issued.Hour()), 2)
 	minute := padLeft(strconv.Itoa(issued.Minute()), 2)
 
-	group := wmo.WFO + awips.Product + year + month + day + hour + minute
+	group := awips.WFO + awips.Product + year + month + day + hour + minute
 
 	txt, err := Surreal().Query(fmt.Sprintf("SELECT group FROM text_products WHERE group == '%s'", group), map[string]interface{}{})
 	if err != nil {
@@ -146,6 +147,7 @@ func Processor(text string, errCh chan error) {
 		AWIPS:   *awips,
 		BIL:     bil,
 		Issued:  issued,
+		WFO:     "wfo:" + awips.WFO,
 	}
 
 	// Push the text product to the database
