@@ -125,7 +125,7 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 				Phenomena:    "phenomena:" + vtec.Phenomena,
 				Significance: "vtec_significance:" + vtec.Significance,
 				Polygon:      polygon,
-				WFO:          vtec.WFO,
+				WFO:          "wfo:" + vtec.WFO,
 				Children:     0,
 			}
 			newParent = true
@@ -153,7 +153,7 @@ func ParseVTECProductSegment(segment Segment, product Product) error {
 			HazardTags:   hazardTags,
 			Emergency:    emergency,
 			PDS:          pds,
-			WFO:          product.WMO.WFO,
+			WFO:          "wfo:" + vtec.WFO,
 		}
 
 		// Verify products a little bit
