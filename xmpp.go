@@ -98,9 +98,13 @@ func XMPP() {
 
 		errCh := make(chan error)
 		go internal.Processor(msg.X.Text, errCh)
-		err := <-errCh
+		err = <-errCh
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
+			_, err := internal.Surreal().Query(fmt.Sprintf("INSERT INTO error_logs (error) VALUES ('%s')", err), map[string]interface{}{})
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 
 		return nil
