@@ -24,6 +24,7 @@ type Product struct {
 	AWIPS   AWIPS     `json:"awips"`
 	BIL     string    `json:"bil,omitempty"`
 	Issued  time.Time `json:"issued"`
+	WFO     string    `json:"wfo"`
 }
 
 func Processor(text string, errCh chan error) {
@@ -146,6 +147,7 @@ func Processor(text string, errCh chan error) {
 		AWIPS:   *awips,
 		BIL:     bil,
 		Issued:  issued,
+		WFO:     "wfo:" + awips.WFO,
 	}
 
 	// Push the text product to the database
