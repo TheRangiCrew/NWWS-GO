@@ -149,6 +149,7 @@ func Processor(text string, errCh chan error) {
 		BIL:     bil,
 		Issued:  issued,
 		WFO:     "wfo:" + awips.WFO,
+		Product: awips.Product,
 	}
 
 	// Push the text product to the database
