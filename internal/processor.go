@@ -21,10 +21,11 @@ type Product struct {
 	GroupID string    `json:"group"`
 	Text    string    `json:"text"`
 	WMO     WMO       `json:"wmo"`
-	AWIPS   AWIPS     `json:"awips"`
+	AWIPS   AWIPS     `json:"-"`
 	BIL     string    `json:"bil,omitempty"`
 	Issued  time.Time `json:"issued"`
 	WFO     string    `json:"wfo"`
+	Product string    `json:"product"`
 }
 
 func Processor(text string, errCh chan error) {
