@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -79,7 +80,7 @@ func XMPP() {
 
 	fmt.Print("\n\nConnected to NWWS-OI! Ready to receive...\n\n")
 
-	session.Serve(xmpp.HandlerFunc(func(t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
+	err = session.Serve(xmpp.HandlerFunc(func(t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
 		d := xml.NewTokenDecoder(t)
 
 		// Ignore anything that's not a message. In a real system we'd want to at
@@ -90,11 +91,11 @@ func XMPP() {
 
 		msg := Message{}
 		_ = d.DecodeElement(&msg, start)
-		// if err != nil && err != io.EOF {
-		// 	// log.Printf("Error decoding message: %q", err)
-		// 	// fmt.Println(msg.Body)
-		// 	// return nil
-		// }
+		if err != nil && err != io.EOF {
+			log.Printf("Error decoding message: %q", err)
+			// fmt.Println(msg.Body)
+			// return nil
+		}
 
 		errCh := make(chan error)
 		go internal.Processor(msg.X.Text, errCh)
@@ -109,5 +110,9 @@ func XMPP() {
 
 		return nil
 	}))
+
+	if err != nil {
+		fmt.Println(err)
+	}
 
 }

@@ -1,0 +1,74 @@
+
+
+320
+
+SXUS83 KAPX 180038
+
+OMRAPX
+
+
+
+Marine Observations
+
+National Weather Service Gaylord MI
+
+738 PM EST Wed Jan 17 2024
+
+
+
+                    WIND  DATA (KTS)   WAVES  WATER          
+
+SITE   DATE/TIME   DIR   SPEED   GUST  (FT)  TEMP(F) SITE NAME
+
+-------------------------------------------------------------
+
+
+
+Lake Superior/St Marys River
+
+
+
+GRMM4   172340Z    290     27     31                 Grand Marais
+
+WFPM4   172340Z    250      8     13                 Whitefish Point
+
+KANJ    172355Z    230     10                        Sault Ste Marie
+
+
+
+Lake Huron
+
+
+
+SRLM4   172200Z    260     23                        Spectacle Reef Light
+
+PRIM4   172350Z    290     10     17                 Presque Isle Light
+
+KAPN    172354Z    230      7                        Alpena Guard Base
+
+TBIM4   172330Z    250     17     21                 Thunder Bay Island
+
+SPTM4   172350Z    250      1      9                 Sturgeon Point Light
+
+TAWM4   172340Z    230      7     12                 Tawas Point
+
+GSLM4   172340Z    230     17     22                 Gravelly Shoals
+
+
+
+Lake Michigan
+
+
+
+NABM4   172340Z    290      9     12                 Naubinway
+
+KPLN    172354Z    260      3                        Pellston
+
+NMIM4   172328Z    220      1      5                 North Manitou Island
+
+KTVC    172353Z    260      8                        Traverse City
+
+MEEM4   172340Z    260     20     23                 Manistee Harbor
+
+BSBM4   172340Z    240     18     24                 Big Sable Point
+
