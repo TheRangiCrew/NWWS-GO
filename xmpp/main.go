@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/xml"
-	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -45,6 +44,15 @@ type Message struct {
 	} `xml:"x"`
 }
 
+func padLeft(text string, padString string, pad int) string {
+	if len(text) < pad {
+		for i := len(text); i < pad; i++ {
+			text = padString + text
+		}
+	}
+	return text
+}
+
 func readOrCreateDir(dirName string) ([]fs.DirEntry, error) {
 	dir, err := os.ReadDir(dirName)
 	if err != nil {
@@ -74,7 +82,7 @@ func writeToFile(text string) error {
 	}
 
 	t := time.Now()
-	dateString := strconv.Itoa(t.Year()) + strconv.Itoa(int(t.Month())) + strconv.Itoa(t.Day())
+	dateString := strconv.Itoa(t.Year()) + padLeft(strconv.Itoa(int(t.Month())), "0", 2) + padLeft(strconv.Itoa(t.Day()), "0", 2)
 
 	dirName = dirName + dateString + "/"
 
@@ -152,7 +160,7 @@ func handleConnection(session *xmpp.Session) error {
 		log.Fatalf(err.Error())
 	}
 
-	fmt.Print("\n\nConnected to NWWS-OI! Ready to receive...\n\n")
+	log.Printf("Connected to NWWS-OI! Ready to receive...\n\n")
 
 	err = session.Serve(xmpp.HandlerFunc(func(t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
 		d := xml.NewTokenDecoder(t)
@@ -201,7 +209,7 @@ func connection() (*xmpp.Session, error) {
 
 func main() {
 
-	err := godotenv.Load("../.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
@@ -209,8 +217,8 @@ func main() {
 	for {
 		session, err := connection()
 		if err != nil {
-			log.Printf("Error connecting: %v", err)
-			time.Sleep(5 * time.Second) // Wait for a while before retrying
+			log.Printf("Error connecting: %v\n\nWaiting 60 seconds before retrying", err)
+			time.Sleep(60 * time.Second) // Wait for a while before retrying
 			continue
 		}
 
