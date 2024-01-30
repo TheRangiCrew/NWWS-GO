@@ -22,18 +22,18 @@ type State struct {
 	Zones []string `json:"zones"`
 }
 
-func ParseUGC(text string, issued time.Time) (UGC, error) {
+func ParseUGC(text string, issued time.Time) (*UGC, error) {
 	ugcStartRegex := regexp.MustCompile("(?m:^[A-Z]{2}(C|Z)[A-Z0-9]{3}(-|>))")
 	startIndex := ugcStartRegex.FindStringIndex(text)
 	if startIndex == nil {
-		return UGC{}, errors.New("Could not find UGC string!")
+		return nil, errors.New("Could not find UGC string!")
 	}
 	start := text[startIndex[0]:]
 
 	ugcEndRegex := regexp.MustCompile("([0-9]{6}-)")
 	endIndex := ugcEndRegex.FindStringIndex(start)
 	if endIndex == nil {
-		return UGC{}, errors.New("Could not find UGC string!")
+		return nil, errors.New("Could not find UGC string!")
 	}
 	// Subtract 1 to remove the - at the end of the UGC
 	original := start[:endIndex[1]-1]
@@ -45,7 +45,7 @@ func ParseUGC(text string, issued time.Time) (UGC, error) {
 	parsedTime, err := time.Parse("021504", segments[len(segments)-1])
 
 	if err != nil {
-		return UGC{}, errors.New("Could not parse UGC datetime!")
+		return nil, errors.New("Could not parse UGC datetime!")
 	}
 
 	year := issued.Year()
@@ -82,12 +82,12 @@ func ParseUGC(text string, issued time.Time) (UGC, error) {
 		if bracketRegexp.MatchString(s) {
 			start, err := strconv.Atoi(s[:3])
 			if err != nil {
-				return UGC{}, errors.New("Could not parse UGC int")
+				return nil, errors.New("Could not parse UGC int")
 			}
 
 			end, err := strconv.Atoi(s[4:])
 			if err != nil {
-				return UGC{}, errors.New("Could not parse UGC int")
+				return nil, errors.New("Could not parse UGC int")
 			}
 
 			for i := start; i <= end; i++ {
@@ -98,7 +98,7 @@ func ParseUGC(text string, issued time.Time) (UGC, error) {
 		}
 	}
 
-	return UGC{
+	return &UGC{
 		Original: original,
 		States:   states,
 		Expires:  expires,

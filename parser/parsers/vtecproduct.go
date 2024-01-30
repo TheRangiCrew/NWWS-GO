@@ -44,8 +44,11 @@ func parseVTECProductSegment(segment string, product *Product) ([]VTECSegment, e
 	if err != nil {
 		return nil, err
 	}
+	if ugc == nil {
+		return nil, nil
+	}
 
-	vtecs, err := ParsePVTEC(segment, product.Issued.UTC(), ugc)
+	vtecs, err := ParsePVTEC(segment, product.Issued.UTC(), *ugc)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +92,7 @@ func parseVTECProductSegment(segment string, product *Product) ([]VTECSegment, e
 			Polygon:      polygon,
 			VTEC:         vtec,
 			HVETC:        hvtec,
-			UGC:          ugc,
+			UGC:          *ugc,
 			LatLon:       latlon,
 			TML:          tml,
 			HazardTags:   hazardTags,
