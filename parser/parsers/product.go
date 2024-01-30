@@ -35,13 +35,21 @@ func (p *Product) VTECProduct() (*VTECProduct, error) {
 	return ParseVTECProduct(p)
 }
 
+func (p *Product) WatchProduct() (*Watch, error) {
+	return ParseWatchProduct(p)
+}
+
+func (p *Product) MCDProduct() (*MCD, error) {
+	return ParseMCD(p)
+}
+
 func NewAWIPSProduct(text string) (*Product, error) {
 
 	var err error = nil
 
 	awips := ParseAWIPS(text)
 	if awips == nil {
-		return nil, err
+		return nil, nil
 	}
 
 	issuedRegexp := regexp.MustCompile("[0-9]{3,4} ((AM|PM) [A-Za-z]{3,4}|UTC) ([A-Za-z]{3} ){2}[0-9]{1,2} [0-9]{4}")

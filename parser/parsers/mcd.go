@@ -2,11 +2,12 @@ package parsers
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TheRangiCrew/NWWS-GO/parser/util"
 )
 
 type MCD struct {
@@ -19,46 +20,46 @@ type MCD struct {
 	WatchProbability int             `json:"watch_probability"`
 }
 
-func ParseMCD(product Product) error {
+func ParseMCD(product *Product) (*MCD, error) {
 
 	idRegexp := regexp.MustCompile(`(Mesoscale Discussion [0-9]{1,4})`)
 	idString := idRegexp.FindString(product.Text)
 	if idString == "" {
-		return errors.New("failed to find a MCD ID string")
+		return nil, errors.New("failed to find a MCD ID string")
 	}
 
 	numberSplit := strings.Split(idString, " ")
 	if len(numberSplit) != 3 {
-		return errors.New("failed to find MCD ID string (wrong length)")
+		return nil, errors.New("failed to find MCD ID string (wrong length)")
 	}
 
 	numberString := numberSplit[2]
 	number, err := strconv.Atoi(numberString)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dateLineRegexp := regexp.MustCompile(`([0-9]{6}Z - [0-9]{6}Z)`)
 	dateLine := dateLineRegexp.FindString(product.Text)
 	if dateLine == "" {
-		return errors.New("failed to find date line in MCD")
+		return nil, errors.New("failed to find date line in MCD")
 	}
 
 	dateLineSplit := strings.Split(dateLine, " - ")
 	if len(dateLineSplit) != 2 {
-		return errors.New("date line does not have two dates in MCD")
+		return nil, errors.New("date line does not have two dates in MCD")
 	}
 
 	layout := "021504Z"
 
 	startT, err := time.Parse(layout, dateLineSplit[0])
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	endT, err := time.Parse(layout, dateLineSplit[1])
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	year := product.Issued.Year()
@@ -76,7 +77,7 @@ func ParseMCD(product Product) error {
 
 	latlon, err := ParseLatLon(product.Text)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	polygon := latlon.Polygon
@@ -98,7 +99,7 @@ func ParseMCD(product Product) error {
 		}
 	}
 
-	id := "MCD" + padLeft(strconv.Itoa(number), 4) + strconv.Itoa(start.Year())
+	id := "MCD" + util.PadZero(strconv.Itoa(number), 4) + strconv.Itoa(start.Year())
 
 	mcd := MCD{
 		ID:               id,
@@ -110,40 +111,5 @@ func ParseMCD(product Product) error {
 		WatchProbability: watch,
 	}
 
-	concerningRegexp := regexp.MustCompile(`(Concerning\.\.\.)(Tornado|Severe Thunderstorm) (Watch) [0-9]+`)
-	concerningLine := concerningRegexp.FindString(product.Text)
-	if concerningLine != "" {
-		phenomenaRegexp := regexp.MustCompile("Tornado Watch")
-		phenomenaString := phenomenaRegexp.FindString(concerningLine)
-		phenomena := "TO"
-		if phenomenaString == "" {
-			phenomena = "SV"
-		}
-
-		watchNumberRegexp := regexp.MustCompile(`[0-9]+`)
-		watchNumber := watchNumberRegexp.FindString(concerningLine)
-		if watchNumber == "" {
-			return errors.New("Found concerning watch in MCD but couldn't parse number MCD " + numberString)
-		}
-		watchID := "severe_watches:" + phenomena + "A" + padLeft(watchNumber, 4) + strconv.Itoa(start.Year())
-
-		// RELATE the watch product to the segment
-		_, err = Surreal().Query(fmt.Sprintf("RELATE mcd:%s->mcd_watch->%s", mcd.ID, watchID), map[string]string{})
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = Surreal().Create("mcd", mcd)
-	if err != nil {
-		return err
-	}
-
-	// RELATE the text product to the mcd
-	_, err = Surreal().Query(fmt.Sprintf("RELATE text_products:%s->mcd_text_products->mcd:%s", product.ID, mcd.ID), map[string]string{})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return &mcd, nil
 }

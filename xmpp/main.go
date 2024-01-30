@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
 	"mellium.im/sasl"
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp"
@@ -69,19 +69,21 @@ func readOrCreateDir(dirName string) ([]fs.DirEntry, error) {
 		}
 	}
 
+	fmt.Println(dir)
+
 	return dir, nil
 }
 
 func writeToFile(text string) error {
 
-	dirName := "../productQueue/"
+	dirName := os.Getenv("PRODUCT_QUEUE_DIR")
 
 	_, err := readOrCreateDir(dirName)
 	if err != nil {
 		return err
 	}
 
-	t := time.Now()
+	t := time.Now().UTC()
 	dateString := strconv.Itoa(t.Year()) + padLeft(strconv.Itoa(int(t.Month())), "0", 2) + padLeft(strconv.Itoa(t.Day()), "0", 2)
 
 	dirName = dirName + dateString + "/"
@@ -209,10 +211,10 @@ func connection() (*xmpp.Session, error) {
 
 func main() {
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// err := godotenv.Load(".env")
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
 
 	for {
 		session, err := connection()

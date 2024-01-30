@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"sort"
@@ -10,14 +9,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TheRangiCrew/NWWS-GO/parser/util"
-	"github.com/joho/godotenv"
+	"github.com/TheRangiCrew/NWWS-GO/parser/db"
 )
 
 const (
-	ProductQueueDirectory               = "../productQueue/"
-	PurgeTime             time.Duration = time.Duration(30 * time.Minute)
+	PurgeTime time.Duration = time.Duration(30 * time.Minute)
 )
+
+var productQueueDirectory string = os.Getenv("PRODUCT_QUEUE_DIR")
+var errorDumpDirectory string = os.Getenv("PRODUCT_ERROR_DIR")
 
 type FileProduct struct {
 	Name  string
@@ -33,7 +33,7 @@ type Directory struct {
 }
 
 func getProducts(d Directory) error {
-	path := ProductQueueDirectory + d.Name + "/"
+	path := productQueueDirectory + d.Name + "/"
 	productDir, err := os.ReadDir(path)
 	if err != nil {
 		return err
@@ -73,10 +73,10 @@ func getProducts(d Directory) error {
 }
 
 func getDirectories() ([]Directory, error) {
-	dirs, err := os.ReadDir(ProductQueueDirectory)
+	dirs, err := os.ReadDir(productQueueDirectory)
 	if err != nil {
 		if err == os.ErrNotExist {
-			return nil, errors.New("Product queue directory does not exist. Make sure the XMPP server is running...")
+			return nil, errors.New("product queue directory does not exist. Make sure the XMPP server is running")
 		}
 		return nil, err
 	}
@@ -133,6 +133,26 @@ func getDirectories() ([]Directory, error) {
 
 }
 
+func moveToErrorDump(name string, text string) error {
+	_, err := os.ReadDir(errorDumpDirectory)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err = os.Mkdir(errorDumpDirectory, os.ModePerm.Perm())
+			if err != nil {
+				return err
+			}
+			_, err = os.ReadDir(errorDumpDirectory)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	err = os.WriteFile(errorDumpDirectory+name, []byte(text), os.ModePerm.Perm())
+
+	return err
+}
+
 func runLatestParser() error {
 
 	dirs, err := getDirectories()
@@ -148,7 +168,7 @@ func runLatestParser() error {
 		if len(*d.Products) == 0 {
 			if d.Time.Sub(time.Now().UTC()) > (24 * time.Hour) {
 				log.Println("Day has passed. Moving on...")
-				err = os.Remove(ProductQueueDirectory + d.Name)
+				err = os.Remove(productQueueDirectory + d.Name)
 				if err != nil {
 					return err
 				}
@@ -161,15 +181,22 @@ func runLatestParser() error {
 				log.Printf("Found %d products in directory with time %s", len(*d.Products), d.Time.Format("02/01/2006"))
 				continue
 			}
-			time.Sleep(5 * time.Second)
+			time.Sleep(1 * time.Second)
 		} else {
-			err = os.Remove(ProductQueueDirectory + d.Name + "/" + (*d.Products)[0].Name)
+			if err = Processor((*d.Products)[0].Text); err != nil {
+				log.Println(err.Error())
+				name := time.Now().UTC().Format("2006_01_02_15_04_05_") + (*d.Products)[0].Name
+				log.Println("Moving to error dump as " + name)
+				err = moveToErrorDump(name, (*d.Products)[0].Text)
+				if err != nil {
+					return err
+				}
+			}
+			err = os.Remove(productQueueDirectory + d.Name + "/" + (*d.Products)[0].Name)
 			if err != nil {
 				return err
 			}
 		}
-
-		fmt.Println(time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC))
 
 		if err = getProducts(d); err != nil {
 			return err
@@ -177,23 +204,56 @@ func runLatestParser() error {
 	}
 }
 
+type Mode int
+
+const (
+	Live Mode = iota
+	IEMArchive
+)
+
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
+
+	var err error
+	mode := Live
+
+	args := os.Args[1:]
+
+	if len(args) > 0 {
+		switch args[0] {
+		case "--live":
+			mode = Live
+		case "--iem":
+			mode = IEMArchive
+		}
 	}
 
-	for {
-		if util.SurrealInit() != nil {
-			log.Printf("Failed to connect to DB: %s\nTrying again in 30 seconds\n\n", err.Error())
-			time.Sleep(30 * time.Second)
-			continue
-		}
-		log.Printf("Connected to DB. Ready to go\n\n")
+	// err := godotenv.Load(".env")
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
 
-		if err := runLatestParser(); err != nil {
-			log.Printf("Error during run: %s\n\nRestarting in 30\n\n", err.Error())
-			time.Sleep(30 * time.Second)
+	if mode == Live {
+		for {
+			if db.SurrealInit() != nil {
+				log.Printf("Failed to connect to DB: %s\nTrying again in 30 seconds\n\n", err.Error())
+				time.Sleep(30 * time.Second)
+				continue
+			}
+			log.Printf("Connected to DB. Ready to go\n\n")
+
+			if err := runLatestParser(); err != nil {
+				log.Printf("Error during run: %s\n\nRestarting in 30\n\n", err.Error())
+				time.Sleep(30 * time.Second)
+			}
+
+		}
+	}
+	if mode == IEMArchive {
+		if db.SurrealInit() != nil {
+			log.Fatalf("Failed to connect to DB: %s", err.Error())
+		}
+		if err := RunIEMArchive(args[1:]); err != nil {
+			log.Fatal(err)
 		}
 	}
 

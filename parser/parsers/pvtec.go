@@ -14,17 +14,16 @@ type PVTECQueryResult struct {
 }
 
 type PVTEC struct {
-	ID           string       `json:"-"`
-	Original     string       `json:"original"`
-	Type         string       `json:"type"`
-	Action       string       `json:"action"`
-	WFO          string       `json:"wfo"`
-	Phenomena    string       `json:"phenomena"`
-	Significance string       `json:"significance"`
-	ETN          int          `json:"etn"`
-	Start        *time.Time   `json:"start"`
-	End          *time.Time   `json:"end"`
-	Parent       *VTECProduct `json:"-"`
+	ID           string     `json:"-"`
+	Original     string     `json:"original"`
+	Type         string     `json:"type"`
+	Action       string     `json:"action"`
+	WFO          string     `json:"wfo"`
+	Phenomena    string     `json:"phenomena"`
+	Significance string     `json:"significance"`
+	ETN          int        `json:"etn"`
+	Start        *time.Time `json:"start"`
+	End          *time.Time `json:"end"`
 }
 
 const TYPES = "OTEX"

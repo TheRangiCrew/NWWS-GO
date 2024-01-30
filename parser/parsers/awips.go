@@ -11,7 +11,7 @@ type AWIPS struct {
 }
 
 func ParseAWIPS(text string) *AWIPS {
-	awipsRegex := regexp.MustCompile("(?m:^[A-Z0-9]{4,6}\n)")
+	awipsRegex := regexp.MustCompile("(?m:^[A-Z0-9]{4,6}[ ]*\n)")
 	original := awipsRegex.FindString(text)
 	if original == "" {
 		return nil

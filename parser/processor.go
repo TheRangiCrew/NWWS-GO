@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/TheRangiCrew/NWWS-GO/parser/db"
 	"github.com/TheRangiCrew/NWWS-GO/parser/parsers"
 	"github.com/TheRangiCrew/NWWS-GO/parser/util"
 	"github.com/surrealdb/surrealdb.go"
@@ -17,7 +18,11 @@ func Processor(text string) error {
 		return err
 	}
 
-	txt, err := util.Surreal().Query(fmt.Sprintf("SELECT group FROM text_products WHERE group == '%s'", product.Group), map[string]interface{}{})
+	if product == nil {
+		return nil
+	}
+
+	txt, err := db.Surreal().Query(fmt.Sprintf("SELECT group FROM text_products WHERE group == '%s'", product.Group), map[string]interface{}{})
 	if err != nil {
 		return err
 	}
@@ -33,41 +38,41 @@ func Processor(text string) error {
 
 	id := product.Group + util.PadZero(strconv.Itoa(sequence), 2)
 
-	println(id)
-
-	// Push the text product to the database
-	_, err = util.Surreal().Create("text_products", product)
-	if err != nil {
-		return err
-	}
+	product.ID = id
 
 	// Send products that need special treatment on their way
 	// Severe Watches
-	// if product.AWIPS.Product == "WOU" {
-	// 	err = ParseWOU(product)
-	// 	return err
-	// }
-	// if product.AWIPS.Product == "WWP" {
-	// 	err = ParseWWP(product)
-	// 	return err
-	// }
-	// if product.AWIPS.Product == "SEL" {
-	// 	err = ParseSEL(product)
-	// 	return err
-	// }
-	// if product.AWIPS.Product == "SWO" {
-	// 	if product.AWIPS.WFO == "MCD" {
-	// 		err = ParseMCD(product)
-	// 		return err
-	// 	}
-	// }
+	switch product.AWIPS.Product {
+	case "WWP":
+		fallthrough
+	case "SEL":
+		fallthrough
+	case "WOU":
+		watch, err := product.WatchProduct()
+		if err != nil {
+			return err
+		}
+		if watch.IsReady() {
+			return db.PushWatch(watch)
+		}
+		return nil
+	}
+	if product.AWIPS.Product == "SWO" {
+		if product.AWIPS.WFO == "MCD" {
+			mcd, err := product.MCDProduct()
+			if err != nil {
+				return err
+			}
+			return db.PushMCD(mcd, product)
+		}
+	}
 
 	if product.HasVTEC() {
 		vtecProduct, err := product.VTECProduct()
 		if err != nil {
 			return err
 		}
-		vtecProduct.Product.
+		return db.PushVTECProduct(vtecProduct)
 	}
 
 	return nil

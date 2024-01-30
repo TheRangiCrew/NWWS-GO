@@ -2,7 +2,6 @@ package parsers
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -10,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/surrealdb/surrealdb.go"
+	"github.com/TheRangiCrew/NWWS-GO/parser/util"
 )
 
 type WWP struct {
@@ -31,15 +30,22 @@ type WWP struct {
 }
 
 type Watch struct {
-	ID         string         `json:"id"`
-	Type       string         `json:"type"`
-	Number     int            `json:"number"`
-	WWP        *WWP           `json:"wwp"`
-	SEL        *string        `json:"sel"`
-	SELProduct *Product       `json:"-"`
-	WOU        *string        `json:"wou"`
-	WOUProduct *Product       `json:"-"`
-	VTEC       *[]VTECSegment `json:"-"`
+	ID         string   `json:"id"`
+	Type       string   `json:"type"`
+	Number     int      `json:"number"`
+	WOU        *string  `json:"wou"`
+	WWP        *WWP     `json:"wwp"`
+	SEL        *string  `json:"sel"`
+	SELProduct *Product `json:"-"`
+}
+
+func (w *Watch) IsReady() bool {
+	if w.WWP.Product == nil || *w.SEL == "" || *w.WOU == "" || w.ID == "" || w.Number == 0 {
+		log.Println("Watch " + w.ID + " incomplete. Waiting...")
+		return false
+	}
+	log.Println("Watch " + w.ID + " ready")
+	return true
 }
 
 var lock = &sync.Mutex{}
@@ -79,7 +85,7 @@ func createWatch(t string, n int, issued time.Time) (*Watch, error) {
 
 	q := Queue()
 
-	id := t + "A" + padLeft(strconv.Itoa(n), 4) + strconv.Itoa(issued.Year())
+	id := t + "A" + util.PadZero(strconv.Itoa(n), 4) + strconv.Itoa(issued.Year())
 
 	s := ""
 	w := ""
@@ -89,11 +95,9 @@ func createWatch(t string, n int, issued time.Time) (*Watch, error) {
 		Type:       t,
 		Number:     n,
 		SEL:        &s,
+		WOU:        &w,
 		SELProduct: &Product{},
 		WWP:        &WWP{},
-		WOU:        &w,
-		WOUProduct: &Product{},
-		VTEC:       &[]VTECSegment{},
 	}
 
 	*q = append(*q, watch)
@@ -104,110 +108,48 @@ func createWatch(t string, n int, issued time.Time) (*Watch, error) {
 		return &Watch{}, errors.New("tried to create watch but failed somehow")
 	}
 
-	log.Print("\nWatch Created" + watch.ID + "\n\n")
+	log.Println("Watch Created " + watch.ID)
 
 	return result, nil
 }
 
-func checkout(watch *Watch, product Product) error {
-	if len(*watch.VTEC) == 0 || watch.WWP.TwoOrMoreTor == "" || *watch.SEL == "" || watch.ID == "" || watch.Number == 0 {
-		log.Print("\nWatch " + watch.ID + " incomplete. Waiting...\n\n")
-		return nil
+func parseWOU(product *Product) (*Watch, error) {
+	watchIDRegexp := regexp.MustCompile("(WS|WT) ([0-9]{1,4})")
+	watchID := strings.Split(watchIDRegexp.FindString(product.Text), " ")
+
+	var phenomena string
+	if watchID[0] == "WS" {
+		phenomena = "SV"
+	} else {
+		phenomena = "TO"
 	}
 
-	_, err := Surreal().Create("severe_watches", *watch)
+	if phenomena == "" {
+		return nil, errors.New("failed to parse WWP watch phenomena")
+	}
+
+	number, err := strconv.Atoi(watchID[1])
+
 	if err != nil {
-		return err
+		return nil, errors.New("failed to parse WWP watch number")
 	}
 
-	return nil
-}
+	watch := findWatch(phenomena, number)
 
-func ParseWOU(product Product) error {
-	segments := strings.Split(product.Text, "$$")
-
-	out := []VTECSegment{}
-
-	for i := 0; i < len(segments)-1; i++ {
-		segment := segments[i]
-
-		ugc, err := ParseUGC(segment, product.Issued)
-		if err != nil {
-			return err
-		}
-
-		vtecs, err := ParsePVTEC(segment, product.Issued, ugc)
-		if err != nil {
-			return err
-		}
-
-		if len(vtecs) > 1 {
-			log.Println("Watch VTEC count is greater than one...?")
-		}
-
-		vtec := vtecs[0]
-
-		month := padLeft(strconv.Itoa(int(product.Issued.Month())), 2)
-		day := padLeft(strconv.Itoa(product.Issued.Day()), 2)
-		hour := padLeft(strconv.Itoa(product.Issued.Hour()), 2)
-		minute := padLeft(strconv.Itoa(product.Issued.Minute()), 2)
-		second := padLeft(strconv.Itoa(time.Now().Second()), 2)
-
-		id := vtec.ID + month + day + hour + minute + second + padLeft(strconv.Itoa(i), 2)
-
-		final := VTECSegment{
-			ID:        id,
-			Original:  segment,
-			Issued:    product.WMO.Issued, // From WMO line
-			Start:     vtec.Start,         // From VTEC
-			End:       vtec.End,           // From VTEC
-			Expires:   ugc.Expires,        // From UGC
-			WFO:       product.WMO.WFO,
-			VTEC:      vtec,
-			UGC:       ugc,
-			Emergency: false,
-			PDS:       false,
-		}
-
-		out = append(out, final)
-	}
-
-	watch := findWatch(out[0].VTEC.Phenomena, out[0].VTEC.ETN)
-
-	var err error
 	if watch == nil {
-		watch, err = createWatch(out[0].VTEC.Phenomena, out[0].VTEC.ETN, product.Issued)
+		watch, err = createWatch(phenomena, number, product.Issued)
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	*watch.WOU = product.Text
-	*watch.WOUProduct = product
-	*watch.VTEC = out
 
-	result, err := Surreal().Query(fmt.Sprintf("SELECT id, number, ->watch_vtec.out.vtec AS vtecs FROM severe_watches:%s", watch.ID), map[string]string{})
-	if err != nil {
-		return err
-	}
-	// Unmarshal data
-	currentWatches := new([]surrealdb.RawQuery[[]struct {
-		ID     string  `json:"id"`
-		Number int     `json:"number"`
-		VTECS  []PVTEC `json:"vtecs"`
-	}])
-	err = surrealdb.Unmarshal(result, &currentWatches)
-	if err != nil {
-		return err
-	}
-
-	checkout(watch, product)
-
-	return nil
+	return watch, nil
 }
 
-func ParseWWP(product Product) error {
+func parseWWP(product *Product) (*Watch, error) {
 	watchIDRegexp := regexp.MustCompile("(WS|WT) ([0-9]{4})")
 	watchID := strings.Split(watchIDRegexp.FindString(product.Text), " ")
 
@@ -219,13 +161,13 @@ func ParseWWP(product Product) error {
 	}
 
 	if phenomena == "" {
-		return errors.New("failed to parse WWP watch phenomena")
+		return nil, errors.New("failed to parse WWP watch phenomena")
 	}
 
 	number, err := strconv.Atoi(watchID[1])
 
 	if err != nil {
-		return errors.New("failed to parse WWP watch number")
+		return nil, errors.New("failed to parse WWP watch number")
 	}
 
 	ampRegexp := regexp.MustCompile(`(&&)`)
@@ -266,24 +208,24 @@ func ParseWWP(product Product) error {
 
 	maxHail, err := strconv.ParseFloat(strings.TrimSpace(rows[0]), 32)
 	if err != nil {
-		return errors.New("failed to parse float of WWP Max Hail")
+		return nil, errors.New("failed to parse float of WWP Max Hail")
 	}
 	maxWind, err := strconv.Atoi(strings.TrimSpace(rows[1]))
 	if err != nil {
-		return errors.New("failed to parse int of WWP Max Wind")
+		return nil, errors.New("failed to parse int of WWP Max Wind")
 	}
 	maxTops, err := strconv.Atoi(strings.TrimSpace(rows[2]))
 	if err != nil {
-		return errors.New("failed to parse int of WWP Max Tops")
+		return nil, errors.New("failed to parse int of WWP Max Tops")
 	}
 	meanStorm := strings.TrimSpace(rows[3])
 	degrees, err := strconv.Atoi(meanStorm[:3])
 	if err != nil {
-		return errors.New("failed to parse degrees of WWP Mean Storm Vector")
+		return nil, errors.New("failed to parse degrees of WWP Mean Storm Vector")
 	}
 	speed, err := strconv.Atoi(meanStorm[3:])
 	if err != nil {
-		return errors.New("failed to parse speed of WWP Mean Storm Vector")
+		return nil, errors.New("failed to parse speed of WWP Mean Storm Vector")
 	}
 	pdsString := strings.TrimSpace(rows[4])
 
@@ -293,7 +235,7 @@ func ParseWWP(product Product) error {
 	}
 
 	wwp := WWP{
-		Product:             &product,
+		Product:             product,
 		TwoOrMoreTor:        twoOrMoreTor,
 		StrongTor:           strongTor,
 		TenOrMoreSevereWind: tenOrMoreSevereWind,
@@ -315,20 +257,16 @@ func ParseWWP(product Product) error {
 		watch, err = createWatch(phenomena, number, product.Issued)
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	*watch.WWP = wwp
-	err = checkout(watch, product)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return watch, nil
 }
 
-func ParseSEL(product Product) error {
+func parseSEL(product *Product) (*Watch, error) {
 	original := product.Text
 
 	idLineRegexp := regexp.MustCompile(`(Severe Thunderstorm|Tornado)( Watch Number )[0-9]+`)
@@ -348,7 +286,7 @@ func ParseSEL(product Product) error {
 	numberString := numberRegexp.FindString(idLine)
 	number, err := strconv.Atoi(numberString)
 	if err != nil {
-		return errors.New("failed to parse SEL watch number")
+		return nil, errors.New("failed to parse SEL watch number")
 	}
 
 	watch := findWatch(phenomena, number)
@@ -357,18 +295,27 @@ func ParseSEL(product Product) error {
 		watch, err = createWatch(phenomena, number, product.Issued)
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	*watch.SELProduct = product
+	*watch.SELProduct = *product
 	*watch.SEL = original
 
-	err = checkout(watch, product)
+	return watch, nil
+}
 
-	if err != nil {
-		return err
+func ParseWatchProduct(product *Product) (*Watch, error) {
+	var watch *Watch
+	var err error
+	switch product.AWIPS.Product {
+	case "WWP":
+		watch, err = parseWWP(product)
+	case "SEL":
+		watch, err = parseSEL(product)
+	case "WOU":
+		watch, err = parseWOU(product)
 	}
 
-	return nil
+	return watch, err
 }

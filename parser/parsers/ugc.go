@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TheRangiCrew/NWWS-GO/parser/util"
 )
 
 type UGC struct {
@@ -89,7 +91,7 @@ func ParseUGC(text string, issued time.Time) (UGC, error) {
 			}
 
 			for i := start; i <= end; i++ {
-				states[currentState].Zones = append(states[currentState].Zones, padLeft(strconv.Itoa(i), 3))
+				states[currentState].Zones = append(states[currentState].Zones, util.PadZero(strconv.Itoa(i), 3))
 			}
 		} else {
 			states[currentState].Zones = append(states[currentState].Zones, s)
