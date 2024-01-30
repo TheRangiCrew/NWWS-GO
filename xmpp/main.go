@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/xml"
-	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -68,8 +67,6 @@ func readOrCreateDir(dirName string) ([]fs.DirEntry, error) {
 			}
 		}
 	}
-
-	fmt.Println(dir)
 
 	return dir, nil
 }
