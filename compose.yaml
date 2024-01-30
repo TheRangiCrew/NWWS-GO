@@ -5,16 +5,16 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - weather:/weather/db
+      - weather:/db
     restart: unless-stopped
-    command: start --auth file:/weather/db/db
+    command: start --auth file:/db/db
     user: root
   nwws-go:
     build: "./parser/"
     restart: unless-stopped
     container_name: "nwws-go"
     volumes:
-      - weather:/weather/nwws
+      - weather:/nwws
     env_file:
       - .env
   nwws-oi:
@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
     container_name: nwws-oi
     volumes:
-      - weather:/weather/nwws
+      - weather:/nwws
     env_file:
       - .env
 volumes:
