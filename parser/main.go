@@ -166,7 +166,6 @@ func runLatestParser() error {
 
 	for {
 		if len(*d.Products) == 0 {
-			log.Println(time.Now().UTC().Sub(d.Time))
 			if time.Now().UTC().Sub(d.Time) > (24 * time.Hour) {
 				log.Println("Day has passed. Moving on...")
 				err = os.Remove(productQueueDirectory + d.Name)
