@@ -182,7 +182,11 @@ func parseWWP(product *Product) (*Watch, error) {
 	rows := strings.Split(probTableString, "\n")
 
 	for i, r := range rows {
-		rows[i] = strings.Split(r, ":")[1]
+		if r == "" {
+			continue
+		}
+		str := strings.Split(strings.TrimSpace(r), ":")
+		rows[i] = str[1]
 	}
 
 	twoOrMoreTor := rows[0]
@@ -201,24 +205,30 @@ func parseWWP(product *Product) (*Watch, error) {
 	attrTableString := strings.ReplaceAll(strings.TrimSpace(attrTableStart[:attrTableEndIndex[0]]), "  ", "")
 
 	rows = strings.Split(attrTableString, "\n")
+	values := []string{}
 
-	for i, r := range rows {
-		rows[i] = strings.Split(r, ":")[1]
+	for _, r := range rows {
+		r = strings.TrimSpace(r)
+		if r == "" {
+			continue
+		}
+		str := strings.Split(r, ":")
+		values = append(values, strings.TrimSpace(str[1]))
 	}
 
-	maxHail, err := strconv.ParseFloat(strings.TrimSpace(rows[0]), 32)
+	maxHail, err := strconv.ParseFloat(values[0], 32)
 	if err != nil {
 		return nil, errors.New("failed to parse float of WWP Max Hail")
 	}
-	maxWind, err := strconv.Atoi(strings.TrimSpace(rows[1]))
+	maxWind, err := strconv.Atoi(values[1])
 	if err != nil {
 		return nil, errors.New("failed to parse int of WWP Max Wind")
 	}
-	maxTops, err := strconv.Atoi(strings.TrimSpace(rows[2]))
+	maxTops, err := strconv.Atoi(values[2])
 	if err != nil {
 		return nil, errors.New("failed to parse int of WWP Max Tops")
 	}
-	meanStorm := strings.TrimSpace(rows[3])
+	meanStorm := values[3]
 	degrees, err := strconv.Atoi(meanStorm[:3])
 	if err != nil {
 		return nil, errors.New("failed to parse degrees of WWP Mean Storm Vector")
@@ -227,7 +237,7 @@ func parseWWP(product *Product) (*Watch, error) {
 	if err != nil {
 		return nil, errors.New("failed to parse speed of WWP Mean Storm Vector")
 	}
-	pdsString := strings.TrimSpace(rows[4])
+	pdsString := values[4]
 
 	pds := false
 	if pdsString == "YES" {

@@ -16,8 +16,8 @@ const (
 	PurgeTime time.Duration = time.Duration(30 * time.Minute)
 )
 
-var productQueueDirectory string = os.Getenv("PRODUCT_QUEUE_DIR")
-var errorDumpDirectory string = os.Getenv("PRODUCT_ERROR_DIR")
+var productQueueDirectory string
+var errorDumpDirectory string
 
 type FileProduct struct {
 	Name  string
@@ -227,10 +227,13 @@ func main() {
 		}
 	}
 
-	// err := godotenv.Load(".env")
+	// err = godotenv.Load(".env")
 	// if err != nil {
 	// 	log.Fatal("Error loading .env file")
 	// }
+
+	productQueueDirectory = os.Getenv("PRODUCT_QUEUE_DIR")
+	errorDumpDirectory = os.Getenv("PRODUCT_ERROR_DIR")
 
 	if mode == Live {
 		for {
