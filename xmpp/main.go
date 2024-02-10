@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -156,6 +157,9 @@ func handleConnection(session *xmpp.Session) error {
 		if err != nil && err != io.EOF {
 			log.Printf("Error decoding message: %q", err)
 		}
+
+		nlRegexp := regexp.MustCompile("\n\n")
+		msg.X.Text = nlRegexp.ReplaceAllString(msg.X.Text, "\n")
 
 		err = writeToFile(msg.X.Text)
 		if err != nil {
