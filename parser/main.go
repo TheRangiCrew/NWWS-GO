@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/TheRangiCrew/NWWS-GO/parser/db"
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -25,18 +26,11 @@ type FileProduct struct {
 	Text  string
 }
 
-type Directory struct {
-	Name        string
-	Time        time.Time
-	Products    *[]FileProduct
-	LastProduct time.Time
-}
-
-func getProducts(d Directory) error {
-	path := productQueueDirectory + d.Name + "/"
+func getProducts() ([]FileProduct, error) {
+	path := productQueueDirectory
 	productDir, err := os.ReadDir(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	products := []FileProduct{}
@@ -44,11 +38,11 @@ func getProducts(d Directory) error {
 		if !d.IsDir() {
 			index, err := strconv.Atoi(strings.Split(d.Name(), ".")[0])
 			if err != nil {
-				return err
+				return nil, err
 			}
 			file, err := os.ReadFile(path + d.Name())
 			if err != nil {
-				return err
+				return nil, err
 			}
 			text := string(file)
 			products = append(products, FileProduct{
@@ -63,74 +57,7 @@ func getProducts(d Directory) error {
 		return products[i].Index < products[j].Index
 	})
 
-	if len(*d.Products) != 0 {
-		d.LastProduct = time.Now().UTC()
-	}
-
-	*d.Products = products
-
-	return nil
-}
-
-func getDirectories() ([]Directory, error) {
-	dirs, err := os.ReadDir(productQueueDirectory)
-	if err != nil {
-		if err == os.ErrNotExist {
-			return nil, errors.New("product queue directory does not exist. Make sure the XMPP server is running")
-		}
-		return nil, err
-	}
-
-	directories := []Directory{}
-
-	for _, dir := range dirs {
-		name := dir.Name()
-
-		if len(name) != 8 {
-			log.Println("Invalid directory name " + name)
-			continue
-		}
-
-		year, err := strconv.Atoi(name[:4])
-		if err != nil {
-			log.Println(err.Error())
-			continue
-		}
-		monthNum, err := strconv.Atoi(name[4:6])
-		if err != nil {
-			log.Println(err.Error())
-			continue
-		}
-		month := time.Month(monthNum)
-		day, err := strconv.Atoi(name[6:8])
-		if err != nil {
-			log.Println(err.Error())
-			continue
-		}
-
-		t := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
-
-		d := Directory{
-			Name:        name,
-			Time:        t,
-			Products:    &[]FileProduct{},
-			LastProduct: time.Now().UTC(),
-		}
-
-		err = getProducts(d)
-		if err != nil {
-			return nil, err
-		}
-
-		directories = append(directories, d)
-	}
-
-	sort.Slice(directories, func(i, j int) bool {
-		return directories[i].Time.After(directories[j].Time)
-	})
-
-	return directories, nil
-
+	return products, nil
 }
 
 func moveToErrorDump(name string, text string) error {
@@ -155,50 +82,35 @@ func moveToErrorDump(name string, text string) error {
 
 func runLatestParser() error {
 
-	dirs, err := getDirectories()
+	products, err := getProducts()
 	if err != nil {
 		return err
 	}
 
-	d := dirs[0]
-
-	log.Printf("Found %d products in directory with time %s", len(*d.Products), d.Time.Format("02/01/2006"))
+	log.Printf("Found %d products in directory", len(products))
 
 	for {
-		if len(*d.Products) == 0 {
-			if time.Now().UTC().Sub(d.Time) > (24 * time.Hour) {
-				log.Println("Day has passed. Moving on...")
-				err = os.Remove(productQueueDirectory + d.Name)
-				if err != nil {
-					return err
-				}
-				dirs, err := getDirectories()
-				if err != nil {
-					return err
-				}
-
-				d = dirs[0]
-				log.Printf("Found %d products in directory with time %s", len(*d.Products), d.Time.Format("02/01/2006"))
-				continue
-			}
+		if len(products) == 0 {
 			time.Sleep(1 * time.Second)
 		} else {
-			if err = Processor((*d.Products)[0].Text); err != nil {
+			if err = Processor((products)[0].Text); err != nil {
 				log.Println(err.Error())
-				name := time.Now().UTC().Format("2006_01_02_15_04_05_") + (*d.Products)[0].Name
+				name := time.Now().UTC().Format("2006_01_02_15_04_05_") + (products)[0].Name
 				log.Println("Moving to error dump as " + name)
-				err = moveToErrorDump(name, (*d.Products)[0].Text)
+				err = moveToErrorDump(name, (products)[0].Text)
 				if err != nil {
 					return err
 				}
 			}
-			err = os.Remove(productQueueDirectory + d.Name + "/" + (*d.Products)[0].Name)
+			err = os.Remove(productQueueDirectory + (products)[0].Name)
 			if err != nil {
 				return err
 			}
 		}
 
-		if err = getProducts(d); err != nil {
+		products, err = getProducts()
+
+		if err != nil {
 			return err
 		}
 	}
@@ -227,10 +139,10 @@ func main() {
 		}
 	}
 
-	// err = godotenv.Load(".env")
-	// if err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// }
+	err = godotenv.Load("../.env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	productQueueDirectory = os.Getenv("PRODUCT_QUEUE_DIR")
 	errorDumpDirectory = os.Getenv("PRODUCT_ERROR_DIR")
