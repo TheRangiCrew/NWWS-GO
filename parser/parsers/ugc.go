@@ -26,14 +26,14 @@ func ParseUGC(text string, issued time.Time) (*UGC, error) {
 	ugcStartRegex := regexp.MustCompile("(?m:^[A-Z]{2}(C|Z)[A-Z0-9]{3}(-|>))")
 	startIndex := ugcStartRegex.FindStringIndex(text)
 	if startIndex == nil {
-		return nil, errors.New("Could not find UGC string!")
+		return nil, nil
 	}
 	start := text[startIndex[0]:]
 
 	ugcEndRegex := regexp.MustCompile("([0-9]{6}-)")
 	endIndex := ugcEndRegex.FindStringIndex(start)
 	if endIndex == nil {
-		return nil, errors.New("Could not find UGC string!")
+		return nil, nil
 	}
 	// Subtract 1 to remove the - at the end of the UGC
 	original := start[:endIndex[1]-1]
