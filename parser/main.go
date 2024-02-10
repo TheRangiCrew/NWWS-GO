@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/TheRangiCrew/NWWS-GO/parser/db"
-	"github.com/joho/godotenv"
 )
 
 const (
@@ -139,10 +138,10 @@ func main() {
 		}
 	}
 
-	err = godotenv.Load("../.env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// err = godotenv.Load("../.env")
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
 
 	productQueueDirectory = os.Getenv("PRODUCT_QUEUE_DIR")
 	errorDumpDirectory = os.Getenv("PRODUCT_ERROR_DIR")
