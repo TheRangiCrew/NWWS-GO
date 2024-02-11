@@ -9,7 +9,7 @@ import (
 )
 
 type PVTECQueryResult struct {
-	Created_At time.Time `json:"created_at"`
+	Created_At time.Time `json:"created_at,omitempty"`
 	VTEC       PVTEC     `json:"vtec"`
 }
 
