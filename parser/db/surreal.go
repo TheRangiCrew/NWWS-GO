@@ -250,16 +250,11 @@ func PushVTECProduct(p *parsers.VTECProduct) error {
 		// Update UGC
 		for _, s := range final.UGC.States {
 
-			var t string
-			if s.Type == "Z" {
-				t = "zones:"
-			} else {
-				t = "counties:"
-			}
 			for _, c := range s.Zones {
-				id := t + s.Name + c
+				id := "ugc:" + s.Name + s.Type + c
+				fmt.Printf("SELECT (SELECT * FROM $parent->vtec_ugc WHERE out == %s) AS cz FROM %s\n", id, parent.ID)
 				// Check to see if the UGC record already exists
-				query := fmt.Sprintf(`SELECT (SELECT * FROM $parent->vtec_county_zones WHERE out == %s) AS cz FROM %s`, id, parent.ID)
+				query := fmt.Sprintf(`SELECT (SELECT * FROM $parent->vtec_ugc WHERE out == %s) AS cz FROM %s`, id, parent.ID)
 				ugcResult, err := Surreal().Query(query, map[string]string{})
 				if err != nil {
 					return err
@@ -342,9 +337,9 @@ func PushVTECProduct(p *parsers.VTECProduct) error {
 					}
 
 					// RELATE the county/zones to the product
-					_, err = Surreal().Query("RELATE $product->vtec_county_zones->$zone SET start = $start, end = $end, issued = $issued, expires = $expires, action = $action", map[string]string{
+					_, err = Surreal().Query("RELATE $product->vtec_ugc->$ugc SET start = $start, end = $end, issued = $issued, expires = $expires, action = $action", map[string]string{
 						"product": parent.ID,
-						"zone":    id,
+						"ugc":     id,
 						"start":   string(start),
 						"end":     string(end),
 						"issued":  string(issued),
