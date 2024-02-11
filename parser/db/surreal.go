@@ -252,7 +252,6 @@ func PushVTECProduct(p *parsers.VTECProduct) error {
 
 			for _, c := range s.Zones {
 				id := "ugc:" + s.Name + s.Type + c
-				fmt.Printf("SELECT (SELECT * FROM $parent->vtec_ugc WHERE out == %s) AS cz FROM %s\n", id, parent.ID)
 				// Check to see if the UGC record already exists
 				query := fmt.Sprintf(`SELECT (SELECT * FROM $parent->vtec_ugc WHERE out == %s) AS cz FROM %s`, id, parent.ID)
 				ugcResult, err := Surreal().Query(query, map[string]string{})
