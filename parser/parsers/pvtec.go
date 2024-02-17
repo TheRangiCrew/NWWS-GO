@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -44,6 +45,10 @@ func ParsePVTEC(text string, issued time.Time, ugc UGC) ([]PVTEC, error) {
 
 		segments := strings.Split(original, ".")
 
+		if len(segments) < 6 {
+			return vtecs, fmt.Errorf("length of segments is %d\n%s", len(segments), segments)
+		}
+
 		// Get VTEC type
 		productType := []rune(segments[0])
 
@@ -52,10 +57,6 @@ func ParsePVTEC(text string, issued time.Time, ugc UGC) ([]PVTEC, error) {
 		}
 
 		// Get VTEC action
-		if len(segments) < 2 {
-			return vtecs, errors.New("segments length is too small\n" + segments)
-		}
-
 		action := segments[1]
 		allowedActions := [10]string{"NEW", "CON", "EXA", "EXT", "EXB", "UPG", "CAN", "EXP", "COR", "ROU"}
 
