@@ -30,13 +30,13 @@ type PVTEC struct {
 const TYPES = "OTEX"
 
 func FindPVTEC(text string) int {
-	vtecRegex := regexp.MustCompile("([A-Z]).([A-Z]+).([A-Z]+).([A-Z]+).([A-Z]).([0-9]+).([0-9TZ]+)-([0-9TZ]+)")
+	vtecRegex := regexp.MustCompile(`([A-Z])\.([A-Z]+)\.([A-Z]+)\.([A-Z]+)\.([A-Z])\.([0-9]+)\.([0-9TZ]+)-([0-9TZ]+)`)
 	result := vtecRegex.FindAllString(text, -1)
 	return len(result)
 }
 
 func ParsePVTEC(text string, issued time.Time, ugc UGC) ([]PVTEC, error) {
-	vtecRegex := regexp.MustCompile("([A-Z]).([A-Z]+).([A-Z]+).([A-Z]+).([A-Z]).([0-9]+).([0-9TZ]+)-([0-9TZ]+)")
+	vtecRegex := regexp.MustCompile(`([A-Z])\.([A-Z]+)\.([A-Z]+)\.([A-Z]+)\.([A-Z])\.([0-9]+)\.([0-9TZ]+)-([0-9TZ]+)`)
 	instances := vtecRegex.FindAllString(text, -1)
 
 	var vtecs []PVTEC
