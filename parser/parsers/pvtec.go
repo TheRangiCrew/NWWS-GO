@@ -52,6 +52,10 @@ func ParsePVTEC(text string, issued time.Time, ugc UGC) ([]PVTEC, error) {
 		}
 
 		// Get VTEC action
+		if len(segments) < 2 {
+			return vtecs, errors.New("segments length is too small\n" + segments)
+		}
+
 		action := segments[1]
 		allowedActions := [10]string{"NEW", "CON", "EXA", "EXT", "EXB", "UPG", "CAN", "EXP", "COR", "ROU"}
 
