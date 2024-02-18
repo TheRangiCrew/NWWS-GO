@@ -106,6 +106,7 @@ func runLatestParser() error {
 			if err != nil {
 				return err
 			}
+			products = products[1:]
 		}
 
 		if err != nil {
