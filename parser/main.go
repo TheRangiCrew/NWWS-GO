@@ -91,6 +91,7 @@ func runLatestParser() error {
 	for {
 		if len(products) == 0 {
 			time.Sleep(1 * time.Second)
+			products, err = getProducts()
 		} else {
 			if err = Processor((products)[0].Text); err != nil {
 				log.Println(err.Error())
@@ -106,8 +107,6 @@ func runLatestParser() error {
 				return err
 			}
 		}
-
-		products, err = getProducts()
 
 		if err != nil {
 			return err
