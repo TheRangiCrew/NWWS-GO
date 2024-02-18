@@ -38,8 +38,6 @@ func Processor(text string) error {
 
 	id := product.Group + util.PadZero(strconv.Itoa(sequence), 2)
 
-	fmt.Println(id)
-
 	product.ID = id
 
 	// Send products that need special treatment on their way
