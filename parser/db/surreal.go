@@ -419,8 +419,9 @@ func PushWatch(watch *parsers.Watch) error {
 }
 
 func PushMCD(mcd *parsers.MCD, p *parsers.Product) error {
-	concerningRegexp := regexp.MustCompile(`(Concerning\.\.\.)([A-Za-z0-9 \.]+)\n\n`)
+	concerningRegexp := regexp.MustCompile(`(Concerning\.\.\.)([A-Za-z0-9 \.\n]+)\n\n`)
 	concerningLine := strings.TrimSpace(concerningRegexp.FindString(mcd.Original))
+	concerningLine = strings.Replace(concerningLine, "Concerning...", "", 1)
 	if concerningLine != "" {
 		phenomenaRegexp := regexp.MustCompile("Tornado Watch")
 		phenomenaString := phenomenaRegexp.FindString(concerningLine)
