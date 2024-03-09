@@ -18,6 +18,7 @@ type MCD struct {
 	Expires          time.Time       `json:"expires"`
 	Polygon          *PolygonFeature `json:"polygon"`
 	WatchProbability int             `json:"watch_probability"`
+	Concerning       string          `json:"concerning"`
 }
 
 func ParseMCD(product *Product) (*MCD, error) {

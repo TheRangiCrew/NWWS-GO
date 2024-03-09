@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -418,8 +419,8 @@ func PushWatch(watch *parsers.Watch) error {
 }
 
 func PushMCD(mcd *parsers.MCD, p *parsers.Product) error {
-	concerningRegexp := regexp.MustCompile(`(Concerning\.\.\.)(Tornado|Severe Thunderstorm) (Watch) [0-9]+`)
-	concerningLine := concerningRegexp.FindString(mcd.Original)
+	concerningRegexp := regexp.MustCompile(`(Concerning\.\.\.)([A-Za-z0-9 \.]+)\n\n`)
+	concerningLine := strings.TrimSpace(concerningRegexp.FindString(mcd.Original))
 	if concerningLine != "" {
 		phenomenaRegexp := regexp.MustCompile("Tornado Watch")
 		phenomenaString := phenomenaRegexp.FindString(concerningLine)
@@ -441,6 +442,8 @@ func PushMCD(mcd *parsers.MCD, p *parsers.Product) error {
 			return err
 		}
 	}
+
+	mcd.Concerning = concerningLine
 
 	_, err := Surreal().Create("mcd", mcd)
 	if err != nil {
