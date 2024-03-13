@@ -423,24 +423,26 @@ func PushMCD(mcd *parsers.MCD, p *parsers.Product) error {
 	concerningLine := strings.TrimSpace(concerningRegexp.FindString(mcd.Original))
 	concerningLine = strings.Replace(concerningLine, "Concerning...", "", 1)
 	if concerningLine != "" {
-		phenomenaRegexp := regexp.MustCompile("Tornado Watch")
+		phenomenaRegexp := regexp.MustCompile("(Severe Thunderstorm Watch|Tornado Watch) ([0-9]+)")
 		phenomenaString := phenomenaRegexp.FindString(concerningLine)
-		phenomena := "TO"
-		if phenomenaString == "" {
-			phenomena = "SV"
-		}
+		if phenomenaString != "" {
+			phenomena := "TO"
+			if phenomenaString == "" {
+				phenomena = "SV"
+			}
 
-		watchNumberRegexp := regexp.MustCompile(`[0-9]+`)
-		watchNumber := watchNumberRegexp.FindString(concerningLine)
-		if watchNumber == "" {
-			return errors.New("Found concerning watch in MCD but couldn't parse number MCD " + strconv.Itoa(mcd.Number))
-		}
-		watchID := "severe_watches:" + phenomena + "A" + util.PadZero(watchNumber, 4) + strconv.Itoa(mcd.Issued.Year())
+			watchNumberRegexp := regexp.MustCompile(`[0-9]+`)
+			watchNumber := watchNumberRegexp.FindString(concerningLine)
+			if watchNumber == "" {
+				return errors.New("Found concerning watch in MCD but couldn't parse number MCD " + strconv.Itoa(mcd.Number))
+			}
+			watchID := "severe_watches:" + phenomena + "A" + util.PadZero(watchNumber, 4) + strconv.Itoa(mcd.Issued.Year())
 
-		// RELATE the watch product to the segment
-		_, err := Surreal().Query(fmt.Sprintf("RELATE mcd:%s->mcd_watch->%s", mcd.ID, watchID), map[string]string{})
-		if err != nil {
-			return err
+			// RELATE the watch product to the segment
+			_, err := Surreal().Query(fmt.Sprintf("RELATE mcd:%s->mcd_watch->%s", mcd.ID, watchID), map[string]string{})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
