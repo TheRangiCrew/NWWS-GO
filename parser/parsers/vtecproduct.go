@@ -38,7 +38,7 @@ func parseVTECProductSegment(segment string, product *Product) ([]VTECSegment, e
 	var err error = nil
 
 	emergencyRegexp := regexp.MustCompile(`(TORNADO|FLASH\s+FLOOD)\s+EMERGENCY`)
-	pdsRegexp := regexp.MustCompile(`THIS\s+IS\s+A\s+PARTICULARLY\s+DANGEROUS\s+SITUATION`)
+	pdsRegexp := regexp.MustCompile(`(THIS\s+IS\s+A|This\s+is\s+a)\s+PARTICULARLY\s+DANGEROUS\s+SITUATION`)
 
 	ugc, err := ParseUGC(segment, product.Issued)
 	if err != nil {
