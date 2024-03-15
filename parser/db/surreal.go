@@ -156,6 +156,7 @@ func PushVTECProduct(p *parsers.VTECProduct) error {
 
 			parent = &VTECProduct{
 				ID:           "vtec_product:" + vtecID,
+				Created_At:   time.Now(),
 				Start:        *segment.VTEC.Start,
 				End:          *segment.VTEC.End,
 				Issued:       product.Issued,
@@ -176,6 +177,7 @@ func PushVTECProduct(p *parsers.VTECProduct) error {
 
 		final := VTECSegment{
 			ID:           id,
+			Created_At:   time.Now(),
 			Original:     segment.Original,
 			Start:        *segment.VTEC.Start, // From VTEC
 			End:          *segment.VTEC.End,   // From VTEC
