@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 )
@@ -41,13 +42,19 @@ func ParseLatLon(text string) (*LATLON, error) {
 				return nil, errors.New("Failed to parse LAT...LON lon")
 			}
 
+			fmt.Println(latInit)
+			fmt.Println(lonInit)
+
 			lat := (float64(latInit) / 100)
 			lon := (float64(lonInit) / 100) * -1
+			fmt.Println(lat)
+			fmt.Println(lon)
 			if lon > -20.0 {
-				lon = lon + 100
+				lon = lon + -100
 			}
 
 			points = append(points, [2]float64{lon, lat})
+			fmt.Println(points)
 		}
 	} else {
 		for i := 0; i < len(segments); i += 2 {
