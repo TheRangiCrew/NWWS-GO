@@ -93,6 +93,7 @@ func runLatestParser() error {
 			time.Sleep(1 * time.Second)
 			products, err = getProducts()
 		} else {
+			log.Printf("Found %d products in directory", len(products))
 			if err = Processor((products)[0].Text); err != nil {
 				log.Println(err.Error())
 				name := time.Now().UTC().Format("2006_01_02_15_04_05_") + (products)[0].Name
@@ -138,7 +139,7 @@ func main() {
 		}
 	}
 
-	// err = godotenv.Load("../.env")
+	// err = godotenv.Load(".env")
 	// if err != nil {
 	// 	log.Fatal("Error loading .env file")
 	// }
