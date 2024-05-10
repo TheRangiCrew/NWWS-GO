@@ -67,6 +67,9 @@ func runLatestParser() error {
 
 	go func() {
 		for notification := range notifications {
+if notification.Action != "CREATE" {
+ continue
+}
 			// Handle each incoming notification
 			var product pendingProduct
 			err := marshal.Unmarshal(notification.Result, &product)
