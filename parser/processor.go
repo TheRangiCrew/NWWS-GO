@@ -49,7 +49,7 @@ func Processor(text string) error {
 		}
 		return nil
 	case "PTS":
-		product.PTSProduct()
+		// product.PTSProduct()
 	}
 	if product.AWIPS.Product == "SWO" {
 		if product.AWIPS.WFO == "MCD" {
