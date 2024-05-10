@@ -7,7 +7,7 @@ import (
 	"github.com/TheRangiCrew/NWWS-GO/parser/db"
 	"github.com/TheRangiCrew/NWWS-GO/parser/parsers"
 	"github.com/TheRangiCrew/NWWS-GO/parser/util"
-	"github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/marshal"
 )
 
 func Processor(text string) error {
@@ -22,19 +22,11 @@ func Processor(text string) error {
 		return nil
 	}
 
-	txt, err := db.Surreal().Query(fmt.Sprintf("SELECT group FROM text_products WHERE group == '%s'", product.Group), map[string]interface{}{})
-	if err != nil {
-		return err
-	}
-	record := new([]surrealdb.RawQuery[[]struct {
+	record, err := marshal.SmartUnmarshal[[]struct {
 		Group string `json:"group"`
-	}])
-	err = surrealdb.Unmarshal(txt, &record)
-	if err != nil {
-		return err
-	}
+	}](db.Surreal().Query(fmt.Sprintf("SELECT group FROM text_products WHERE group == '%s'", product.Group), map[string]string{}))
 
-	sequence := len((*record)[0].Result)
+	sequence := len(record)
 
 	id := product.Group + util.PadZero(strconv.Itoa(sequence), 2)
 
@@ -56,6 +48,8 @@ func Processor(text string) error {
 			return db.PushWatch(watch)
 		}
 		return nil
+	case "PTS":
+		product.PTSProduct()
 	}
 	if product.AWIPS.Product == "SWO" {
 		if product.AWIPS.WFO == "MCD" {

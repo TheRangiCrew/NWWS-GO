@@ -39,6 +39,10 @@ func (p *Product) WatchProduct() (*Watch, error) {
 	return ParseWatchProduct(p)
 }
 
+func (p *Product) PTSProduct() (*PTS, error) {
+	return ParsePTSProduct(p)
+}
+
 func (p *Product) MCDProduct() (*MCD, error) {
 	return ParseMCD(p)
 }

@@ -4,3 +4,5 @@ github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
 github.com/surrealdb/surrealdb.go v0.2.1 h1:E4rCnD75Ftq8/wTgbQ9kJgMACi3xMziXtMlRkm6Jh1g=
 github.com/surrealdb/surrealdb.go v0.2.1/go.mod h1:CloW70O49xyVO/rGO9cAZ62FEbl0/hreRHEJuamnndQ=
+github.com/surrealdb/surrealdb.go v0.2.2-0.20240205063555-7c2584a964ab h1:i6TAxWD2XxGdRnyTE/reK1SjQ2rQCOieGQjWcy24Zes=
+github.com/surrealdb/surrealdb.go v0.2.2-0.20240205063555-7c2584a964ab/go.mod h1:OMLXK8rmuJwY7NNHbJA3rfjQGKbFRkiOKIShMNKr2S8=

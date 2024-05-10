@@ -45,7 +45,7 @@ func ParseUGC(text string, issued time.Time) (*UGC, error) {
 	parsedTime, err := time.Parse("021504", segments[len(segments)-1])
 
 	if err != nil {
-		return nil, errors.New("Could not parse UGC datetime!")
+		return nil, errors.New("could not parse UGC datetime")
 	}
 
 	year := issued.Year()
@@ -82,12 +82,12 @@ func ParseUGC(text string, issued time.Time) (*UGC, error) {
 		if bracketRegexp.MatchString(s) {
 			start, err := strconv.Atoi(s[:3])
 			if err != nil {
-				return nil, errors.New("Could not parse UGC int")
+				return nil, errors.New("could not parse UGC int")
 			}
 
 			end, err := strconv.Atoi(s[4:])
 			if err != nil {
-				return nil, errors.New("Could not parse UGC int")
+				return nil, errors.New("could not parse UGC int")
 			}
 
 			for i := start; i <= end; i++ {

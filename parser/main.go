@@ -1,119 +1,139 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"os"
-	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/TheRangiCrew/NWWS-GO/parser/db"
+	"github.com/joho/godotenv"
+	"github.com/surrealdb/surrealdb.go/pkg/marshal"
 )
 
 const (
 	PurgeTime time.Duration = time.Duration(30 * time.Minute)
 )
 
-var productQueueDirectory string
-var errorDumpDirectory string
-
-type FileProduct struct {
-	Name  string
-	Index int
-	Text  string
-}
-
-func getProducts() ([]FileProduct, error) {
-	path := productQueueDirectory
-	productDir, err := os.ReadDir(path)
-	if err != nil {
-		return nil, err
-	}
-
-	products := []FileProduct{}
-	for _, d := range productDir {
-		if !d.IsDir() {
-			index, err := strconv.Atoi(strings.Split(d.Name(), ".")[0])
-			if err != nil {
-				return nil, err
-			}
-			file, err := os.ReadFile(path + d.Name())
-			if err != nil {
-				return nil, err
-			}
-			text := string(file)
-			products = append(products, FileProduct{
-				Name:  d.Name(),
-				Index: index,
-				Text:  text,
-			})
-		}
-	}
-
-	sort.Slice(products, func(i, j int) bool {
-		return products[i].Index < products[j].Index
-	})
-
-	return products, nil
-}
-
-func moveToErrorDump(name string, text string) error {
-	_, err := os.ReadDir(errorDumpDirectory)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(errorDumpDirectory, os.ModePerm.Perm())
-			if err != nil {
-				return err
-			}
-			_, err = os.ReadDir(errorDumpDirectory)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	err = os.WriteFile(errorDumpDirectory+name, []byte(text), os.ModePerm.Perm())
-
-	return err
+type pendingProduct struct {
+	ID        string    `json:"id"`
+	Received  time.Time `json:"received_at"`
+	Text      string    `json:"text"`
+	Processed time.Time `json:"processed_at,omitempty"`
+	Error     string    `json:"error,omitempty"`
 }
 
 func runLatestParser() error {
 
-	products, err := getProducts()
+	pending, err := marshal.SmartUnmarshal[pendingProduct](db.Surreal().Query("SELECT * FROM pending_text_products WHERE processed_at == NONE && error == NONE", map[string]string{}))
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Found %d products pending\n", len(pending))
+
+	for _, product := range pending {
+		errChan := make(chan error)
+
+		go func(text string) {
+			errChan <- Processor(text)
+		}(product.Text)
+
+		err = <-errChan
+		if err != nil {
+			product.Processed = time.Now()
+			product.Error = err.Error()
+			products, er := marshal.SmartUnmarshal[pendingProduct](marshal.SmartMarshal(db.Surreal().Update, product))
+			if er != nil {
+				log.Println(er)
+			} else {
+				product = products[0]
+				log.Printf("Error on %s: %s\n", product.ID, err)
+			}
+		} else {
+			db.Surreal().Delete(product.ID)
+		}
+	}
+
+	liveQuery, err := db.Surreal().Live("pending_text_products", false)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Found %d products in directory", len(products))
-
-	for {
-		if len(products) == 0 {
-			time.Sleep(1 * time.Second)
-			products, err = getProducts()
-		} else {
-			log.Printf("Found %d products in directory", len(products))
-			if err = Processor((products)[0].Text); err != nil {
-				log.Println(err.Error())
-				name := time.Now().UTC().Format("2006_01_02_15_04_05_") + (products)[0].Name
-				log.Println("Moving to error dump as " + name)
-				err = moveToErrorDump(name, (products)[0].Text)
-				if err != nil {
-					return err
-				}
-			}
-			err = os.Remove(productQueueDirectory + (products)[0].Name)
-			if err != nil {
-				return err
-			}
-			products = products[1:]
-		}
-
-		if err != nil {
-			return err
-		}
+	notifications, er := db.Surreal().LiveNotifications(liveQuery)
+	if er != nil {
+		panic(er)
 	}
+
+	fmt.Println("Listening for products")
+
+	go func() {
+		for notification := range notifications {
+			// Handle each incoming notification
+			var product pendingProduct
+			err := marshal.Unmarshal(notification.Result, &product)
+			if err != nil {
+				panic(err)
+			}
+			errChan := make(chan error)
+
+			go func(text string) {
+				errChan <- Processor(text)
+			}(product.Text)
+
+			err = <-errChan
+			if err != nil {
+				product.Processed = time.Now()
+				product.Error = err.Error()
+				products, er := marshal.SmartUnmarshal[pendingProduct](marshal.SmartMarshal(db.Surreal().Update, product))
+				if er != nil {
+					log.Println(er)
+				} else {
+					product = products[0]
+					log.Printf("Error on %s: %s\n", product.ID, err)
+				}
+			} else {
+				db.Surreal().Delete(product.ID)
+			}
+		}
+	}()
+
+	select {}
+
+	// products, err := getProducts()
+	// if err != nil {
+	// 	return err
+	// }
+
+	// log.Printf("Found %d products in directory", len(products))
+
+	// for {
+	// 	if len(products) == 0 {
+	// 		time.Sleep(1 * time.Second)
+	// 		products, err = getProducts()
+	// 	} else {
+	// 		log.Printf("Found %d products in directory", len(products))
+	// 		if err = Processor((products)[0].Text); err != nil {
+	// 			log.Println(err.Error())
+	// 			name := time.Now().UTC().Format("2006_01_02_15_04_05_") + (products)[0].Name
+	// 			log.Println("Moving to error dump as " + name)
+	// 			err = moveToErrorDump(name, (products)[0].Text)
+	// 			if err != nil {
+	// 				return err
+	// 			}
+	// 		}
+	// 		err = os.Remove(productQueueDirectory + (products)[0].Name)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		products = products[1:]
+	// 	}
+
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
 }
 
 type Mode int
@@ -139,28 +159,22 @@ func main() {
 		}
 	}
 
-	// err = godotenv.Load(".env")
-	// if err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// }
-
-	productQueueDirectory = os.Getenv("PRODUCT_QUEUE_DIR")
-	errorDumpDirectory = os.Getenv("PRODUCT_ERROR_DIR")
+	err = godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	if mode == Live {
-		for {
-			if db.SurrealInit() != nil {
-				log.Printf("Failed to connect to DB: %s\nTrying again in 30 seconds\n\n", err.Error())
-				time.Sleep(30 * time.Second)
-				continue
-			}
-			log.Printf("Connected to DB. Ready to go\n\n")
+		for db.SurrealInit() != nil {
+			log.Printf("Failed to connect to DB: %s\nTrying again in 30 seconds\n\n", err.Error())
+			time.Sleep(30 * time.Second)
+			continue
+		}
+		log.Printf("Connected to DB. Ready to go\n\n")
 
-			if err := runLatestParser(); err != nil {
-				log.Printf("Error during run: %s\n\nRestarting in 30\n\n", err.Error())
-				time.Sleep(30 * time.Second)
-			}
-
+		if err := runLatestParser(); err != nil {
+			log.Printf("Error during run: %s\n\nRestarting in 30\n\n", err.Error())
+			time.Sleep(30 * time.Second)
 		}
 	}
 	if mode == IEMArchive {

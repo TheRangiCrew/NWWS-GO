@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/xml"
 	"io"
 	"io/fs"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"mellium.im/sasl"
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp"
@@ -180,8 +182,12 @@ func connection() (*xmpp.Session, error) {
 	session, err := xmpp.DialClientSession(
 		context.TODO(),
 		jid.MustParse(username+"@"+server),
-		xmpp.SASL(username, password, sasl.ScramSha1Plus, sasl.ScramSha1, sasl.Plain),
 		xmpp.BindResource(),
+		xmpp.StartTLS(&tls.Config{
+			MinVersion:         0,
+			InsecureSkipVerify: true,
+		}),
+		xmpp.SASL(username, password, sasl.ScramSha256Plus, sasl.ScramSha1Plus, sasl.ScramSha256, sasl.ScramSha1, sasl.Plain),
 	)
 
 	if err != nil {
@@ -193,10 +199,10 @@ func connection() (*xmpp.Session, error) {
 
 func main() {
 
-	// err := godotenv.Load("../.env")
-	// if err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// }
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	for {
 		session, err := connection()

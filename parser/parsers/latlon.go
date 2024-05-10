@@ -2,7 +2,6 @@ package parsers
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"strconv"
 )
@@ -14,8 +13,55 @@ type LATLON struct {
 }
 
 type PolygonFeature struct {
-	Type        string         `json:"type"`
+	Type        string         `json:"type"` // Polygon
 	Coordinates [][][2]float64 `json:"coordinates"`
+}
+
+type MultiPolygonFeature struct {
+	Type        string           `json:"type"` // MultiPolygon
+	Coordinates [][][][2]float64 `json:"coordinates"`
+}
+
+func ParsePoint(segments []string) (*[2]float64, error) {
+	if len(segments[0]) > 5 {
+		s := segments[0]
+		latInit, err := strconv.Atoi(s[0:4])
+		if err != nil {
+			return nil, errors.New("failed to parse point latitude")
+		}
+
+		lonInit, err := strconv.Atoi(s[4:8])
+		if err != nil {
+			return nil, errors.New("failed to parse point longitude")
+		}
+
+		lat := (float64(latInit) / 100)
+		lon := (float64(lonInit) / 100) * -1
+		if lon > -20.0 {
+			lon = lon + -100
+		}
+
+		return &[2]float64{lon, lat}, nil
+	} else {
+		if len(segments) > 2 {
+			return nil, errors.New("point string was not the correct size")
+		}
+		latInit, err := strconv.Atoi(segments[0])
+		if err != nil {
+			return nil, errors.New("failed to parse point latitude")
+		}
+		lonInit, err := strconv.Atoi(segments[1])
+		if err != nil {
+			return nil, errors.New("failed to parse point longitude")
+		}
+
+		lat := (float64(latInit) / 100)
+		lon := (float64(lonInit) / 100) * -1
+		if lon <= -180.0 {
+			lon = lon + 360.0
+		}
+		return &[2]float64{lon, lat}, nil
+	}
 }
 
 func ParseLatLon(text string) (*LATLON, error) {
@@ -32,48 +78,22 @@ func ParseLatLon(text string) (*LATLON, error) {
 	points := [][2]float64{}
 	if len(segments[0]) > 5 {
 		for _, s := range segments {
-			latInit, err := strconv.Atoi(s[0:4])
+			point, err := ParsePoint([]string{s})
 			if err != nil {
-				return nil, errors.New("Failed to parse LAT...LON lat")
+				return nil, err
 			}
-
-			lonInit, err := strconv.Atoi(s[4:8])
-			if err != nil {
-				return nil, errors.New("Failed to parse LAT...LON lon")
-			}
-
-			fmt.Println(latInit)
-			fmt.Println(lonInit)
-
-			lat := (float64(latInit) / 100)
-			lon := (float64(lonInit) / 100) * -1
-			fmt.Println(lat)
-			fmt.Println(lon)
-			if lon > -20.0 {
-				lon = lon + -100
-			}
-
-			points = append(points, [2]float64{lon, lat})
-			fmt.Println(points)
+			points = append(points, *point)
 		}
 	} else {
 		for i := 0; i < len(segments); i += 2 {
-			latInit, err := strconv.Atoi(segments[i])
+			point, err := ParsePoint([]string{segments[i], segments[i+1]})
 			if err != nil {
-				return nil, errors.New("Failed to parse LAT...LON lat")
+				return nil, err
 			}
-			lonInit, err := strconv.Atoi(segments[i+1])
-			if err != nil {
-				return nil, errors.New("Failed to parse LAT...LON lon")
-			}
-
-			lat := (float64(latInit) / 100)
-			lon := (float64(lonInit) / 100) * -1
-			if lon <= -180.0 {
-				lon = lon + 360.0
-			}
-			points = append(points, [2]float64{lon, lat})
+			points = append(points, *point)
 		}
+	}
+	if points[0] != points[len(points)-1] {
 		points = append(points, points[0])
 	}
 

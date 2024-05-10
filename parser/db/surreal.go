@@ -14,6 +14,8 @@ import (
 	"github.com/TheRangiCrew/NWWS-GO/parser/parsers"
 	"github.com/TheRangiCrew/NWWS-GO/parser/util"
 	"github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/conn/gorilla"
+	"github.com/surrealdb/surrealdb.go/pkg/marshal"
 )
 
 var surrealLock = &sync.Mutex{}
@@ -36,7 +38,7 @@ func SurrealInit() error {
 		database := os.Getenv("SURREAL_DATABASE")
 		namespace := os.Getenv("SURREAL_NAMESPACE")
 
-		db, err := surrealdb.New(url)
+		db, err := surrealdb.New(url, gorilla.Create())
 		if err != nil {
 			return err
 		}
@@ -45,11 +47,12 @@ func SurrealInit() error {
 			return err
 		}
 
-		if _, err = db.Signin(map[string]interface{}{
-			"user": username,
-			"pass": password,
-			"NS":   namespace,
-		}); err != nil {
+		authData := &surrealdb.Auth{
+			Username:  username,
+			Password:  password,
+			Namespace: namespace,
+		}
+		if _, err = db.Signin(authData); err != nil {
 			return err
 		}
 
@@ -122,21 +125,14 @@ func PushVTECProduct(p *parsers.VTECProduct) error {
 		// Get the most recent record if one exists
 		query := fmt.Sprintf(`SELECT *, count(->vtec_product_segments) AS children FROM vtec_product:%s`, vtecID)
 
-		parentResult, err := Surreal().Query(query, map[string]string{})
-		if err != nil {
-			return err
-		}
-
-		// NOTE: Surreal returns an array of the result which requires an array to be Unmarshalled. This is referenced later
-		record := new([]surrealdb.RawQuery[[]VTECProduct])
-		err = surrealdb.Unmarshal(parentResult, &record)
+		record, err := marshal.SmartUnmarshal[VTECProduct](Surreal().Query(query, map[string]string{}))
 		if err != nil {
 			return err
 		}
 
 		var parent *VTECProduct
-		if len((*record)[0].Result) != 0 {
-			parent = &(*record)[0].Result[0]
+		if len(record) != 0 {
+			parent = &record[0]
 		}
 
 		if segment.VTEC.Start == nil {
@@ -256,14 +252,7 @@ func PushVTECProduct(p *parsers.VTECProduct) error {
 			for _, c := range s.Zones {
 				id := "ugc:" + s.Name + s.Type + c
 				// Check to see if the UGC record already exists
-				query := fmt.Sprintf(`SELECT (SELECT * FROM $parent->vtec_ugc WHERE out == %s) AS cz FROM %s`, id, parent.ID)
-				ugcResult, err := Surreal().Query(query, map[string]string{})
-				if err != nil {
-					return err
-				}
-
-				// NOTE: Surreal returns an array of the result which requires an array to be Unmarshalled. This is referenced later
-				cz := new([]surrealdb.RawQuery[[]struct {
+				cz, err := marshal.SmartUnmarshal[struct {
 					CZ []struct {
 						ID      string    `json:"id"`
 						In      string    `json:"in"`
@@ -274,16 +263,15 @@ func PushVTECProduct(p *parsers.VTECProduct) error {
 						Expires time.Time `json:"expires"`
 						Action  string    `json:"action"`
 					} `json:"cz"`
-				}])
-				err = surrealdb.Unmarshal(ugcResult, &cz)
+				}](Surreal().Query(fmt.Sprintf(`SELECT (SELECT * FROM $parent->vtec_ugc WHERE out == %s) AS cz FROM %s`, id, parent.ID), map[string]string{}))
 				if err != nil {
 					return err
 				}
 
-				if len((*cz)[0].Result) != 0 && len((*cz)[0].Result[0].CZ) != 0 {
+				if len(cz) != 0 && len(cz[0].CZ) != 0 {
 
 					update := false
-					current := (*cz)[0].Result[0].CZ[0]
+					current := cz[0].CZ[0]
 					if current.Start.Compare(final.Start) > 0 {
 						current.Start = final.Start
 						update = true

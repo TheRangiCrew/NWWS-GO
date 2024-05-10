@@ -29,7 +29,7 @@ func ParseTML(text string, issued time.Time) (*TML, error) {
 	parsedTime, err := time.Parse(("1504Z"), segments[0])
 
 	if err != nil {
-		return nil, errors.New("Could not parse TML time")
+		return nil, errors.New("could not parse TML time")
 	}
 
 	time := time.Date(issued.Year(), issued.Month(), issued.Day(), parsedTime.Hour(), parsedTime.Minute(), 0, 0, time.Now().UTC().Location())
@@ -37,22 +37,22 @@ func ParseTML(text string, issued time.Time) (*TML, error) {
 	direction, err := strconv.Atoi(segments[1][:3])
 
 	if err != nil {
-		return nil, errors.New("Could not parse direction in TML")
+		return nil, errors.New("could not parse direction in TML")
 	}
 
 	speed, err := strconv.Atoi(segments[2][:2])
 
 	if err != nil {
-		return nil, errors.New("Could not parse speed in TML")
+		return nil, errors.New("could not parse speed in TML")
 	}
 
 	latInit, err := strconv.Atoi(segments[3])
 	if err != nil {
-		return nil, errors.New("Failed to parse LAT...LON lat")
+		return nil, errors.New("failed to parse LAT...LON lat")
 	}
 	lonInit, err := strconv.Atoi(segments[4])
 	if err != nil {
-		return nil, errors.New("Failed to parse LAT...LON lon")
+		return nil, errors.New("failed to parse LAT...LON lon")
 	}
 
 	lat := float64(latInit) / 100
